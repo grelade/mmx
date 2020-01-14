@@ -1,9 +1,9 @@
 ## meme_exchange
-meme scrapper and analyzer
+tool for meme popularity analysis
 
 ## external: 
 * [clustering alg](https://github.com/zegami/image-similarity-clustering)
-* [memescrape](https://github.com/Salil-Jain/memescraper)
+* [memescraper](https://github.com/Salil-Jain/memescraper)
 
 ## usage:
 ```
