@@ -9,6 +9,7 @@ meme scrapper and analyzer
 ```
 ./script.sh
 ```
+final stage is a tsv file *images_clusters.tsv* where memes are clustered.
 
 ## desc:
 
