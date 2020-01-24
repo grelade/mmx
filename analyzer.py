@@ -55,7 +55,7 @@ mdfeaturedir = os.path.splitext(mddir)[0]+'_features.tsv'
 
 # 3) run basic clustering
 print('find euclidean distance clusters')
-subprocess.call('python bin/cluster_basic.py --metadata '+mdfeaturedir+' --th 50',shell=True)
+subprocess.call('python bin/cluster_basic.py --metadata '+mdfeaturedir,shell=True)
 
 # 4) run umap feature reduction
 print('find umap coords for visualization')
