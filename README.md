@@ -1,16 +1,23 @@
 ## meme_exchange
 tool for meme popularity analysis
 
-## external: 
+## based on: 
 * [clustering alg](https://github.com/zegami/image-similarity-clustering)
 * [memescraper](https://github.com/Salil-Jain/memescraper)
 
-## usage:
+## scrape:
+
+To scrape use
 ```
-./script.sh
+python scrape_batch.py
 ```
-final stage is a tsv file *images_clusters.tsv* where memes are clustered.
+which should create directory *data* and store memes,dankmemes and wholesomememes. 
+
+## analyze:
+To analyze scraped dat use
+```
+python analyzer.py --metadatas LIST_OF_METADATAS
+```
+creates *anal* directory with analyses. outputs a scatter plot with umap and clustering encoded through colors.
 
 ## desc:
-
-admittedly, the script is pretty shoddy atm.
