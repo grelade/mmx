@@ -10,7 +10,7 @@ import config as cfg
 
 subreddits = ['memes','dankmemes','wholesomememes']
 time0 = time.strftime(cfg.default_date_format, time.localtime())
-nopages = 1
+nopages = 20
 
 for sub in subreddits:
 

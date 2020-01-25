@@ -44,25 +44,42 @@ for md in mds:
 # 1) merge reports for further analysis
 print('merging metadata files: ',mds)
 print('merged file',mddir)
-subprocess.call('python bin/merge_metadata.py --metadatas '+mds_arg+' --merged_metadata '+mddir,shell=True)
+
+cmd = 'python '+os.path.join('bin','merge_metadata.py')	+' --metadatas '+mds_arg
+														+' --merged_metadata '+mddir
+print(cmd)
+subprocess.call(cmd,shell=True)
+
 
 
 # 2) run feature extraction
 print('running feature extraction')
-subprocess.call('python bin/feature_extract.py --metadata '+mddir,shell=True)
+cmd = 'python '+os.path.join('bin','feature_extract.py')+' --metadata '+mddir
+print(cmd)
+subprocess.call(cmd,shell=True)
 
 mdfeaturedir = os.path.splitext(mddir)[0]+'_features.tsv'
 
 # 3) run basic clustering
 print('find euclidean distance clusters')
-subprocess.call('python bin/cluster_basic.py --metadata '+mdfeaturedir,shell=True)
+cmd = 'python '+os.path.join('bin','cluster_basic.py')+' --metadata '+mdfeaturedir
+print(cmd)
+subprocess.call(cmd,shell=True)
 
 # 4) run umap feature reduction
 print('find umap coords for visualization')
-subprocess.call('python bin/visual_umap.py --metadata '+mdfeaturedir,shell=True)
+cmd = 'python '+os.path.join('bin','visual_umap.py')+' --metadata '+mdfeaturedir
+print(cmd)
+subprocess.call(cmd,shell=True)
 
 # 5) run visualization tool to see how well clustering works
 print('run visualization tool')
 mdfeaturedir_cluster = os.path.splitext(mdfeaturedir)[0]+'_clusterbasic.tsv'
 mdfeaturedir_reduction = os.path.splitext(mdfeaturedir)[0]+'_umap.tsv'
-subprocess.call('python bin/visual_tool.py --metadata_cluster '+mdfeaturedir_cluster+' --metadata_reduction '+mdfeaturedir_reduction,shell=True)
+
+cmd = 'python '+os.path.join('bin','visual_tool.py')+' --metadata_cluster '+mdfeaturedir_cluster
+													+' --metadata_reduction '+mdfeaturedir_reduction
+													+' --metadata '+mddir
+													+' --minclustersize '+'10'
+print(cmd)
+subprocess.call(cmd,shell=True)

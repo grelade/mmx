@@ -56,7 +56,7 @@ while features.shape[0]>0:
     # drop vecs whose cluster was identified
     features = pd.concat([features,cluster_temp]).drop_duplicates(subset=mindex,keep=False)
     cluster_temp[cells['cluster_id']] = i
-    print(cluster_temp)
+    #print(cluster_temp)
     # append vecs with cluster i
     cluster_features = cluster_features.append(cluster_temp[set(mindex+[cells['cluster_id']])],sort=False)
     i+=1
