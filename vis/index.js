@@ -28,15 +28,15 @@ var canvas = document.querySelector('#main'),
     ctx.fillStyle = 'black';
     ctx.fill();
 
-d3.tsv('images_merged.tsv').then(function(data){
+d3.tsv('localhost:7900/analysis01_features_umap.tsv').then(function(data){
 
   //console.log(d3.extent(data,function(d) { return d.x }))
   var x = d3.scaleLinear()
-    .domain(d3.extent(data, function(d) { return d.x }))
+    .domain(d3.extent(data, function(d) { return d.umap_x }))
     .range([80, chart.width - 80])
 
   var y = d3.scaleLinear()
-    .domain(d3.extent(data, function(d) { return d.y }))
+    .domain(d3.extent(data, function(d) { return d.umap_y }))
     .range([140, chart.height - 140])
 
     //.attr("src","images/"+data.images)
