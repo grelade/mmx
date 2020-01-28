@@ -67,15 +67,25 @@ def savelog(log,logpath):
 
 
 def geturl(urls):
+	print('geturl URL:',urls)
+	htmltext = ''
 	ifsuccesful = False
-	while not ifsuccesful:
+	tries = 0
+	limit = 25
+	while not ifsuccesful and tries < limit:
 		try:
 			htmlfile = urllib.request.urlopen(urls)
 			htmltext = htmlfile.read().decode("utf-8")
 			ifsuccesful = True
+
 		except urllib.error.HTTPError:
 			print('reached connection limit: sleeping')
 			time.sleep(args.timelag)
+			tries = tries + 1
+			continue
+		except ValueError:
+			print('ValueError detected!')
+			tries = tries + 1
 			continue
 	return htmltext
 
@@ -101,7 +111,25 @@ try:
 		names_pattern = re.compile(names_regex)
 		names = re.findall(names_pattern, htmltext)
 
+		# regex to identify upvotes
+		upvotes_regex = "data-score.+?\"(.+?)\""
+		upvotes_pattern = re.compile(upvotes_regex)
+		upvotes = re.findall(upvotes_pattern,htmltext)
 
+		# regex number of comments
+		comments_regex = "data-comments-count.+?\"(.+?)\""
+		comments_pattern = re.compile(comments_regex)
+		comments = re.findall(comments_pattern,htmltext)
+
+		# regex publication date
+		publdate_regex = "data-timestamp.+?\"(.+?)\""
+		publdate_pattern = re.compile(publdate_regex)
+		publdate = re.findall(publdate_pattern,htmltext)
+
+		# check for any mismatches in the feed
+		if not (len(all_urls)==len(names)==len(upvotes)==len(comments)==len(publdate)):
+			print('dimensional mismatch: ',len(all_urls),len(names),len(upvotes),len(comments),len(publdate))
+			break
 
 		for j,s in enumerate(all_urls):
 
@@ -114,7 +142,7 @@ try:
 			if len(ext) == 1:
 				memefile = str(np.abs(np.random.randn()))[:10] + "." + ext[0]
 				com = "wget --no-check-certificate " + s + " -O \""+ os.path.join(memedir,memefile) + "\""
-				subprocess.call(com,shell=True)
+				subprocess.call(com,shell=True,timeout=50)
 
 
 				dataset_meta = dataset_meta.append({cells['id']:k,
@@ -122,7 +150,9 @@ try:
 														cells['scrape_source']:args.subreddit,
 														cells['image_filename']:memefile,
 														cells['image_title']:names[j],
-														cells['image_upvotes']:0},	#upvotes not implemented
+														cells['image_upvotes']:upvotes[j],
+														cells['no_of_comments']:comments[j],
+														cells['image_publ_date']:publdate[j]},
 														ignore_index=True)
 				k = k+1
 				#time.sleep(args.timelag)
@@ -131,9 +161,9 @@ try:
 		regex1 = "next-button.+?\"(.+?)\""
 		pattern1 = re.compile(regex1)
 		link1 = re.findall(pattern1,htmltext)
-		if(len(link1) == 0):
-			print("Something went wrong for i = %d. trying again...",i)
-			time.sleep(3)
+		if(len(link1) < 4 and link1[0]=='desktop-onboarding-sign-up__form-note'):
+			print("reached subreddits' last page",i)
+			break
 		else:
 			urls = link1[0]
 			#times = time.strftime("%d-%m-%Y %H:%M:%S", time.localtime())
