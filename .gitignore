@@ -3,4 +3,6 @@ anal/
 data/
 .ipynb_checkpoints
 notebook.ipynb
+*.ipynb
 bin/__pycache__
+sub_test.tsv

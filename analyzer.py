@@ -6,6 +6,9 @@ import sys
 sys.path.append('bin')
 import config as cfg
 import argparse
+import functools, operator
+import glob
+
 
 
 parser = argparse.ArgumentParser(prog='analyzer tool')
@@ -16,7 +19,10 @@ parser.add_argument('--analname',default='analysis01')
 
 args = parser.parse_args()
 
-mds = args.metadatas
+# parse regex like *.tsv into list of files
+mds0 = list(map(glob.glob,args.metadatas))
+mds = list(set(functools.reduce(operator.iconcat, mds0 , [])))
+#mds = args.metadatas
 
 analdir = args.analdir
 analname = args.analname
@@ -45,8 +51,7 @@ for md in mds:
 print('merging metadata files: ',mds)
 print('merged file',mddir)
 
-cmd = 'python '+os.path.join('bin','merge_metadata.py')	+' --metadatas '+mds_arg
-														+' --merged_metadata '+mddir
+cmd = 'python '+os.path.join('bin','merge_metadata.py')	+' --metadatas '+mds_arg+' --merged_metadata '+mddir
 print(cmd)
 subprocess.call(cmd,shell=True)
 
@@ -77,9 +82,19 @@ print('run visualization tool')
 mdfeaturedir_cluster = os.path.splitext(mdfeaturedir)[0]+'_clusterbasic.tsv'
 mdfeaturedir_reduction = os.path.splitext(mdfeaturedir)[0]+'_umap.tsv'
 
-cmd = 'python '+os.path.join('bin','visual_tool.py')+' --metadata_cluster '+mdfeaturedir_cluster
-													+' --metadata_reduction '+mdfeaturedir_reduction
-													+' --metadata '+mddir
-													+' --minclustersize '+'10'
+cmd = ''.join([	'python '+os.path.join('bin','visual_tool.py'),
+				' --metadata_cluster '+mdfeaturedir_cluster,
+				' --metadata_reduction '+mdfeaturedir_reduction,
+				' --metadata '+mddir,
+				' --minclustersize 10'])
+print(cmd)
+subprocess.call(cmd,shell=True)
+
+# 6)
+print('run cluster data trimming for online display')
+cluster_cutoff = 5 # cutoff clusters of size less than 5
+cmd = 'python '+os.path.join('bin','anal_web.py')+' --metadata '+mdfeaturedir
+												 +' --metadata_cluster '+mdfeaturedir_cluster
+												 +' --cutoff '+cluster_cutoff
 print(cmd)
 subprocess.call(cmd,shell=True)
