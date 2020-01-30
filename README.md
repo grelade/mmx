@@ -1,4 +1,4 @@
-## memEX
+## memsEX
 tool for meme popularity analysis
 
 ## based on:

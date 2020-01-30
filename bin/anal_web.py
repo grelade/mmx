@@ -1,9 +1,20 @@
-# parser dedicated to online uses  
+# parser dedicated to online uses
 
 import pandas as pd
 import argparse
 import config as cfg
 import os
+import shutil
+
+def mkdir(a):
+    sep = os.sep
+    dirs = a.strip(sep).split(sep)
+    path=''
+    for dire in dirs:
+        path = os.path.join(path,dire)
+        if (not os.path.isdir(path)):
+            os.mkdir(path)
+
 
 parser = argparse.ArgumentParser()
 
@@ -41,3 +52,13 @@ source_filename = os.path.splitext(md)[0].split(os.sep)[-1]
 tsv_name = os.path.join(destination_dir, '{}_web.tsv'.format(source_filename))
 
 result.to_csv(tsv_name,sep='\t')
+
+
+# extract relevant images and copy to anal dir
+imgs = result[['time','source','filename']].values
+for img in imgs:
+    path = os.path.join(destination_dir,cfg.default_datadir,img[0],img[1])
+    mkdir(path)
+    file = os.path.join(cfg.default_datadir,img[0],img[1],img[2])
+    where = os.path.join(path,img[2])
+    shutil.copy(file,where)

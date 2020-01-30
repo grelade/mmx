@@ -93,8 +93,6 @@ subprocess.call(cmd,shell=True)
 # 6)
 print('run cluster data trimming for online display')
 cluster_cutoff = 5 # cutoff clusters of size less than 5
-cmd = 'python '+os.path.join('bin','anal_web.py')+' --metadata '+mdfeaturedir
-												 +' --metadata_cluster '+mdfeaturedir_cluster
-												 +' --cutoff '+cluster_cutoff
+cmd = 'python '+os.path.join('bin','anal_web.py')+' --metadata '+mdfeaturedir+' --metadata_cluster '+mdfeaturedir_cluster+' --cutoff '+cluster_cutoff
 print(cmd)
 subprocess.call(cmd,shell=True)

@@ -5,7 +5,7 @@ default_datadir = "data"
 default_analdir = "anal"
 
 #default date format
-default_date_format = "%Y-%m-%d_%H:%M"
+default_date_format = "%Y-%m-%d_%H-%M"
 
 #columns found in metadata files
 metadata_columns = {'id':'id',
