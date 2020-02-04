@@ -168,6 +168,7 @@ try:
 		publdate_pattern = re.compile(publdate_regex)
 		publdate = re.findall(publdate_pattern,htmltext)
 
+
 		# check for any mismatches in the feed
 		if not (len(all_urls)==len(names)==len(upvotes)==len(comments)==len(publdate)):
 			print('dimensional mismatch: ',len(all_urls),len(names),len(upvotes),len(comments),len(publdate))
@@ -193,7 +194,8 @@ try:
 														cells['image_title']:names[j],
 														cells['image_upvotes']:upvotes[j],
 														cells['no_of_comments']:comments[j],
-														cells['image_publ_date']:publdate[j]},
+														cells['image_publ_date']:publdate[j],
+														cells['image_url']:all_urls[j]},
 														ignore_index=True)
 				k = k+1
 				#time.sleep(args.timelag)
@@ -202,6 +204,7 @@ try:
 		regex1 = "next-button.+?\"(.+?)\""
 		pattern1 = re.compile(regex1)
 		link1 = re.findall(pattern1,htmltext)
+		print(link1)
 		if(len(link1) < 4 and link1[0]=='desktop-onboarding-sign-up__form-note'): # dirty way of identifying last page
 			print("reached subreddits' last page",i)
 			break

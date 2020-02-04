@@ -18,9 +18,9 @@ def mkdir(a):
 
 parser = argparse.ArgumentParser()
 
-parser.add_argument('--metadata')
-parser.add_argument('--metadata_cluster')
-parser.add_argument('--cutoff',default=5)
+parser.add_argument('--metadata',type=str)
+parser.add_argument('--metadata_cluster',type=str)
+parser.add_argument('--cutoff',type=int,default=5)
 
 arg = parser.parse_args()
 
@@ -40,7 +40,7 @@ t = csv['cluster'].value_counts()
 csv['cluster_size'] = csv['cluster'].map(lambda x:t[x])
 csv2 = csv.drop_duplicates(subset=['cluster_size','cluster'])
 csv3 = csv2.sort_values(by='cluster_size',ascending=False)
-csv4 = csv3[csv3['cluster_size']>=5]
+csv4 = csv3[csv3['cluster_size']>=cutoff]
 
 
 result = pd.merge(csv4,test)

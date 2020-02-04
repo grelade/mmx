@@ -16,7 +16,7 @@ parser = argparse.ArgumentParser(prog='analyzer tool')
 parser.add_argument('--metadatas',nargs='+')
 parser.add_argument('--analdir',default=cfg.default_analdir)
 parser.add_argument('--analname',default='analysis01')
-
+parser.add_argument('--clustercutoff',default=5,help='cluster size cutoff')
 args = parser.parse_args()
 
 # parse regex like *.tsv into list of files
@@ -77,22 +77,23 @@ cmd = 'python '+os.path.join('bin','visual_umap.py')+' --metadata '+mdfeaturedir
 print(cmd)
 subprocess.call(cmd,shell=True)
 
-# 5) run visualization tool to see how well clustering works
-print('run visualization tool')
 mdfeaturedir_cluster = os.path.splitext(mdfeaturedir)[0]+'_clusterbasic.tsv'
 mdfeaturedir_reduction = os.path.splitext(mdfeaturedir)[0]+'_umap.tsv'
 
-cmd = ''.join([	'python '+os.path.join('bin','visual_tool.py'),
-				' --metadata_cluster '+mdfeaturedir_cluster,
-				' --metadata_reduction '+mdfeaturedir_reduction,
-				' --metadata '+mddir,
-				' --minclustersize 10'])
-print(cmd)
-subprocess.call(cmd,shell=True)
+# 5) run visualization tool to see how well clustering works
+# print('run visualization tool')
+#
+# cmd = ''.join([	'python '+os.path.join('bin','visual_tool.py'),
+# 				' --metadata_cluster '+mdfeaturedir_cluster,
+# 				' --metadata_reduction '+mdfeaturedir_reduction,
+# 				' --metadata '+mddir,
+# 				' --minclustersize 10'])
+# print(cmd)
+# subprocess.call(cmd,shell=True)
 
 # 6)
 print('run cluster data trimming for online display')
-cluster_cutoff = 5 # cutoff clusters of size less than 5
-cmd = 'python '+os.path.join('bin','anal_web.py')+' --metadata '+mdfeaturedir+' --metadata_cluster '+mdfeaturedir_cluster+' --cutoff '+cluster_cutoff
+cluster_cutoff = 1 # cutoff clusters of size less than 5
+cmd = 'python '+os.path.join('bin','anal_web.py')+' --metadata '+mddir+' --metadata_cluster '+mdfeaturedir_cluster+' --cutoff '+str(cluster_cutoff)
 print(cmd)
 subprocess.call(cmd,shell=True)
