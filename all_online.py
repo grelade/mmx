@@ -317,7 +317,7 @@ if __name__ == "__main__":
 
 	#paths
 	analdir = 'anal'
-	analname = 'a07'
+	analname = 'a01'
 	mkdir(os.path.join(analdir,analname))
 	mdpath = os.path.join(analdir,analname,analname+'.tsv')
 	md_featspath = os.path.join(analdir,analname,analname+'_features.tsv')
@@ -365,7 +365,7 @@ if __name__ == "__main__":
 	md_clusters = clust.gen_clusters()
 
 	# prepare for web
-	wp = web_prepare(2)
+	wp = web_prepare(5)
 	wp.setmd(md)
 	wp.setmd_cluster(md_clusters)
 	md_web = wp.combine_web()
