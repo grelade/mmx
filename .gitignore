@@ -9,4 +9,4 @@ sub_test.tsv
 cluster-lit
 anal_online.py
 anal_umap.py
-bin/scrape_reddit2.py
+__pycache__

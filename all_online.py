@@ -32,6 +32,25 @@ def wgetpy(url,out):
 	res = wg.download(url,out=out)
 	print('wgetpy:',res)
 
+# tested method, less secure for unknown urls
+def wget(url,out):
+
+	com = "wget --no-check-certificate " + url + " -q -O \""+ out + "\""
+	res = 1
+	tries = 0
+	limit = 10
+	print('wget:',url,'->',out)
+	while res>0 and tries < limit:
+		try:
+			res = subprocess.call(com,shell=True)
+			tries = tries + 1
+			#print('wget:',res)
+			if res>0: time.sleep(2)
+		except subprocess.TimeoutExpired as e:
+			print('timeout reached:',e)
+			continue
+
+
 # download whole html file
 def geturl(urls):
 	print('geturl URL:',urls)
@@ -67,6 +86,13 @@ def savemd(log,logpath):
 	print("saving metadata file")
 	log = log.set_index(mindex)
 	log.to_csv(logpath,mode = 'w',sep='\t')
+
+# loa metadata
+def loadmd(logpath):
+	print("load metadata file")
+	#log = log.set_index(mindex)
+	return pd.read_csv(logpath,sep='\t')
+
 
 # make dir if nonexistent
 def mkdir(a):
@@ -185,6 +211,7 @@ class feature_extractor:
 
 	def __init__(self,model):
 		self.model = self.named_model(model)
+		self.dlfile = dlmethod = globals()['wget']
 
 	def named_model(self,name):
 		if name == 'Xception':
@@ -208,7 +235,8 @@ class feature_extractor:
 
 		temp_file = 'temp'+os.path.splitext(imgurl)[1]
 		if os.path.exists(temp_file): os.remove(temp_file)
-		wgetpy(imgurl,temp_file)
+		self.dlfile(imgurl,temp_file)
+
 		# load image setting the image size to 224 x 224
 		img = image.load_img(temp_file, target_size=(224, 224))
 
@@ -259,10 +287,10 @@ class clustering:
 
 class web_prepare:
 
-	def __init__(self,cutoff):
+	def __init__(self,**kwargs):
 		self.md = ''
 		self.md_cluster = ''
-		self.cutoff = cutoff
+		self.cutoff = kwargs['cluster_cutoff']
 
 	def setmd(self,md):
 		self.md = md
@@ -281,26 +309,9 @@ class web_prepare:
 		csv3 = csv2.sort_values(by=cells['cluster_size'],ascending=False)
 		csv4 = csv3[csv3[cells['cluster_size']]>=self.cutoff]
 
-
 		result = pd.merge(csv4,test)
-
-
-		# concat filename
-		#destination_dir = os.path.dirname(md)
-		#source_filename = os.path.splitext(md)[0].split(os.sep)[-1]
-		#tsv_name = os.path.join(destination_dir, '{}_web.tsv'.format(source_filename))
 		return result
 
-
-
-	# extract relevant images and copy to anal dir
-	# imgs = result[['time','source','filename']].values
-	# for img in imgs:
-	#     path = os.path.join(destination_dir,cfg.default_datadir,img[0],img[1])
-	#     mkdir(path)
-	#     file = os.path.join(cfg.default_datadir,img[0],img[1],img[2])
-	#     where = os.path.join(path,img[2])
-	#     shutil.copy(file,where)
 
 
 if __name__ == "__main__":
@@ -317,25 +328,40 @@ if __name__ == "__main__":
 
 	#paths
 	analdir = 'anal'
-	analname = 'a01'
-	mkdir(os.path.join(analdir,analname))
-	mdpath = os.path.join(analdir,analname,analname+'.tsv')
-	md_featspath = os.path.join(analdir,analname,analname+'_features.tsv')
-	md_clusterspath = os.path.join(analdir,analname,analname+'_clusterscipy.tsv')
-	md_webpath = os.path.join(analdir,analname,analname+'_web.tsv')
+	analname = 'a02'
+	dir = os.path.join(analdir,analname)
+	mkdir(dir)
+	mdpath = os.path.join(dir,analname+'.tsv')
+	md_featspath = os.path.join(dir,analname+'_features.tsv')
+	md_clusterspath = os.path.join(dir,analname+'_clusterscipy.tsv')
+	md_webpath = os.path.join(dir,analname+'_web.tsv')
 
-	# main metadata
-	md = pd.DataFrame(columns=mindex + [cells['image_filename'],cells['image_title'],cells['image_upvotes'],cells['no_of_comments'],cells['image_publ_date']])
+	# check whether continue or start new analysis
+	if os.path.exists(mdpath) and os.path.exists(md_featspath) and os.path.exists(md_clusterspath) and os.path.exists(md_webpath):
+		# load existing main metadata
+		md = loadmd(mdpath)
+		# load existing features metadata
+		md_feats = loadmd(md_featspath)
+		#load existing clusters metadata
+		md_cluster = loadmd(md_clusterspath)
 
-	# features metadata
-	md_feats = pd.DataFrame(columns=mindex + [cells['feature_vector']])
+	else:
+		# create new main metadata
+		md = pd.DataFrame(columns=mindex + [cells['image_filename'],cells['image_title'],cells['image_upvotes'],cells['no_of_comments'],cells['image_publ_date'],cells['image_url']])
+		# features metadata
+		md_feats = pd.DataFrame(columns=mindex + [cells['feature_vector']])
+		# clusters metadata
+		md_clusters = pd.DataFrame(columns=mindex + [cells['cluster_id']])
 
-	# clusters metadata
-	md_clusters = pd.DataFrame(columns=mindex + [cells['cluster_id']])
+
 
 	# ResNet feature extractor
 	fe = feature_extractor('resnet')
+
 	id = 0
+	dupl_num = 0
+	dupl_max = 10
+
 	for subreddit,nopage in zip(subreddits,nopages):
 		scrap = scraper(name=subreddit,nopages=nopage)
 
@@ -344,31 +370,51 @@ if __name__ == "__main__":
 				#scraping
 				record = scrap.getmeme()
 				if not record == {}:
-
-					#feature extraction
-					feature = fe.extract(record[cells['image_url']])
-
-					# append to md, md_feats
+					# temporary record df
+					mdtemp = pd.DataFrame(columns=mindex + [cells['image_filename'],cells['image_title'],cells['image_upvotes'],cells['no_of_comments'],cells['image_publ_date'],cells['image_url']])
 					record[cells['id']] = id
-					md = md.append(record,ignore_index=True)
-					md_feats = md_feats.append({cells['id']:record[cells['id']],cells['scrape_time']:record[cells['scrape_time']],cells['scrape_source']:record[cells['scrape_source']],cells['feature_vector']:feature},ignore_index=True)
-					id += 1
+					mdtemp = mdtemp.append(record,ignore_index=True)
+
+					# identify record duplicates
+					cmpfields = [cells['scrape_source'],cells['image_title'],cells['image_url']]
+					record_exists = (md[cmpfields]==mdtemp[cmpfields].iloc[0]).apply(lambda x: x.all(),axis=1).any()
+					if not record_exists:
+
+						md = md.append(record,ignore_index=True)
+						#feature extraction
+						feature = fe.extract(record[cells['image_url']])
+						md_feats = md_feats.append({cells['id']:record[cells['id']],cells['scrape_time']:record[cells['scrape_time']],cells['scrape_source']:record[cells['scrape_source']],cells['feature_vector']:feature},ignore_index=True)
+						id += 1
+					else:
+						print('duplicate found')
+						if dupl_num<dupl_max:
+							dupl_num += 1
+						else:
+							print('maximum duplicate reached; skipping to next subreddit')
+							dupl_num = 0
+							break
 
 			except Exception as ex:
 				# skip all exceptions for now
 				print(ex)
 				pass
 
-	# clustering
-	clust = clustering()
-	clust.load_features(md_feats)
-	md_clusters = clust.gen_clusters()
 
+	#print(md_feats)
+	#input()
+	# clustering
+	print('clustering()')
+	clust = clustering()
+	clust.load_features(md_feats.copy())
+	md_clusters = clust.gen_clusters()
+	#input()
 	# prepare for web
-	wp = web_prepare(5)
+	print('web_prepare()')
+	wp = web_prepare(cluster_cutoff=5)
 	wp.setmd(md)
 	wp.setmd_cluster(md_clusters)
 	md_web = wp.combine_web()
+	#input()
 
 	savemd(md,mdpath)
 	savemd(md_feats,md_featspath)
