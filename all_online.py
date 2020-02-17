@@ -329,12 +329,13 @@ if __name__ == "__main__":
 	#paths
 	analdir = 'anal'
 	analname = 'a02'
+	analmd = 'md'
 	dir = os.path.join(analdir,analname)
 	mkdir(dir)
-	mdpath = os.path.join(dir,analname+'.tsv')
-	md_featspath = os.path.join(dir,analname+'_features.tsv')
-	md_clusterspath = os.path.join(dir,analname+'_clusterscipy.tsv')
-	md_webpath = os.path.join(dir,analname+'_web.tsv')
+	mdpath = os.path.join(dir,analmd+'.tsv')
+	md_featspath = os.path.join(dir,analmd+'_features.tsv')
+	md_clusterspath = os.path.join(dir,analmd+'_clusterscipy.tsv')
+	md_webpath = os.path.join(dir,analmd+'_web.tsv')
 
 	# check whether continue or start new analysis
 	if os.path.exists(mdpath) and os.path.exists(md_featspath) and os.path.exists(md_clusterspath) and os.path.exists(md_webpath):
