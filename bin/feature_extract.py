@@ -44,93 +44,93 @@ parser = argparse.ArgumentParser(prog='Feature extractor')
 parser.add_argument('--metadata', default=None, help='Path to the metadata tsv file')
 #parser.add_argument('--imagedir', default=None)
 parser.add_argument('--datadir',type=str,default=cfg.default_datadir)
-parser.add_argument(
-    '--model',
-    default='ResNet50',
-    nargs="?",
-    type=named_model,
-    help='Name of the pre-trained model to use'
-)
+parser.add_argument('--model',default='ResNet50',type=str,help='Name of the pre-trained model to use')
 
 
-pargs = parser.parse_args()
+def run(*a,**kwargs):
 
-# load metadata column names from config file
-cells = cfg.metadata_columns
-mindex = cfg.metadata_index_columns
-
-metadata = pargs.metadata
-datadir = pargs.datadir
-
-def get_feature(metadata):
-    #print('{}'.format(metadata['id']))
-
-    try:
-        # reconstruct path to image
-        img_path = os.path.join(datadir,metadata[cells['scrape_time']],metadata[cells['scrape_source']], metadata[cells['image_filename']])
-
-        if os.path.isfile(img_path):
-            print('exec feature extraction: {}'.format(img_path))
-            try:
-                # load image setting the image size to 224 x 224
-                img = image.load_img(img_path, target_size=(224, 224))
-                # convert image to numpy array
-                x = image.img_to_array(img)
-                # the image is now in an array of shape (3, 224, 224)
-                # but we need to expand it to (1, 2, 224, 224) as Keras is expecting a list of images
-                x = np.expand_dims(x, axis=0)
-                x = preprocess_input(x)
-
-                # extract the features
-                features = pargs.model.predict(x)[0]
-                # convert from Numpy to a list of values
-                features_arr = np.char.mod('%f', features)
-
-                return {cells['id']: metadata[cells['id']],
-                        cells['scrape_time']: metadata[cells['scrape_time']],
-                        cells['scrape_source']: metadata[cells['scrape_source']],
-                        cells['feature_vector']: ','.join(features_arr)}
-            except Exception as ex:
-                # skip all exceptions for now
-                print(ex)
-                pass
-    except Exception as ex:
-        # skip all exceptions for now
-        print(ex)
-        pass
-    return None
+	default_args = vars(parser.parse_known_args()[0])
+	args = argparse.Namespace(**{**default_args,**kwargs})
 
 
-def start():
-    try:
+	# load metadata column names from config file
+	cells = cfg.metadata_columns
+	mindex = cfg.metadata_index_columns
+
+	metadata = args.metadata
+	datadir = args.datadir
+
+	model = named_model(args.model)
+
+	def get_feature(metadata):
+	    #print('{}'.format(metadata['id']))
+
+	    try:
+	        # reconstruct path to image
+	        img_path = os.path.join(datadir,metadata[cells['scrape_time']],metadata[cells['scrape_source']], metadata[cells['image_filename']])
+
+	        if os.path.isfile(img_path):
+	            print('exec feature extraction: {}'.format(img_path))
+	            try:
+	                # load image setting the image size to 224 x 224
+	                img = image.load_img(img_path, target_size=(224, 224))
+	                # convert image to numpy array
+	                x = image.img_to_array(img)
+	                # the image is now in an array of shape (3, 224, 224)
+	                # but we need to expand it to (1, 2, 224, 224) as Keras is expecting a list of images
+	                x = np.expand_dims(x, axis=0)
+	                x = preprocess_input(x)
+
+	                # extract the features
+	                features = model.predict(x)[0]
+	                # convert from Numpy to a list of values
+	                features_arr = np.char.mod('%f', features)
+
+	                return {cells['id']: metadata[cells['id']],
+	                        cells['scrape_time']: metadata[cells['scrape_time']],
+	                        cells['scrape_source']: metadata[cells['scrape_source']],
+	                        cells['feature_vector']: ','.join(features_arr)}
+	            except Exception as ex:
+	                # skip all exceptions for now
+	                print(ex)
+	                pass
+	    except Exception as ex:
+	        # skip all exceptions for now
+	        print(ex)
+	        pass
+	    return None
+
+	try:
         # read the source file
-        data = pd.read_csv(metadata, sep='\t')
+		data = pd.read_csv(metadata, sep='\t')
 
         # extract features
-        features = map(get_feature, data.T.to_dict().values())
+		features = map(get_feature, data.T.to_dict().values())
 
         # remove empty entries
         #features = filter(None, features)
 
         # write to a tab delimited file
 
-        data_features = pd.DataFrame(columns=mindex + [cells['feature_vector']])
+		data_features = pd.DataFrame(columns=mindex + [cells['feature_vector']])
 
-        for feature in features:
-            data_features = data_features.append(feature,ignore_index=True)
+		for feature in features:
+			data_features = data_features.append(feature,ignore_index=True)
         #
         # with open(os.path.join(source_dir, '{}_features.tsv'.format(source_filename)), 'w') as output:
         #     w = csv.DictWriter(output, fieldnames=['id', 'features'], delimiter='\t', lineterminator='\n')
         #     w.writeheader()
         #     w.writerows(features)
 
-        data_features_path = os.path.splitext(metadata)[0]+'_features.tsv'
-        data_features = data_features.set_index(mindex)
-        data_features.to_csv(data_features_path, sep='\t')
+		data_features_path = os.path.splitext(metadata)[0]+'_features.tsv'
+		data_features = data_features.set_index(mindex)
+		data_features.to_csv(data_features_path, sep='\t')
 
-    except EnvironmentError as e:
-        print(e)
+	except EnvironmentError as e:
+		print(e)
 
 
 if __name__ == '__main__':
-    start()
+	args = parser.parse_args()
+	run(**vars(args))
+	#start()

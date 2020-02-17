@@ -5,9 +5,11 @@ import time
 import sys
 import os
 sys.path.append('bin')
+import scrape_reddit
 import config as cfg
 import pandas as pd
 import argparse
+
 
 parser = argparse.ArgumentParser()
 parser.add_argument('--conf',default='subreddits.tsv')
@@ -25,15 +27,8 @@ c_active = c[c['active']==1] # pick only active ones
 subreddits = c_active['subreddit'].to_list()
 nopages =c_active['nopages'].to_list()
 
-
 dlmethod = pargs.dlmethod
 
 for sub,nopage in zip(subreddits,nopages):
-
-    subprocess.call('python '   +os.path.join('bin','scrape_reddit.py')
-                                +' --subreddit '+sub
-                                +' --datadir '+cfg.default_datadir
-                                +' --time '+time0
-                                +' --nopages '+str(nopage)
-                                +' --dlmethod '+dlmethod,shell=True)
+    scrape_reddit.run(subreddit=sub,datadir=cfg.default_datadir,time=time0,nopage=str(nopage),dlmethod=dlmethod)
     time.sleep(10)
