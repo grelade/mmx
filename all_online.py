@@ -104,22 +104,12 @@ def mkdir(a):
         if (not os.path.isdir(path)):
             os.mkdir(path)
 
-
-#argument parser
-parser = argparse.ArgumentParser(prog='all-in-one online tool')
-# parser.add_argument('--subreddit',type=str,default='memes',help='which subreddit to scrape; default=memes')
-# parser.add_argument('--nopages',type=int,default=10,help='how many pages to scrape, if -1 then alg scrapes everything; default=10')
-# parser.add_argument('--time',type=str,default='2020-01-01_00-00',help='scrape session timestamp')
-# parser.add_argument('--datadir',type=str,default=cfg.default_datadir,help='where downloaded data should be stored; default='+cfg.default_datadir)
-# parser.add_argument('--timelag',type=int,default=5,help='algorithm halt when connection limit is reached given in seconds; default=5')
-# parser.add_argument('--dlmethod',default='wgetpy',help='download methods: wgetpy, wget (UNIX only) and urllibdl; default=wgetpy')
-
 class scraper:
 
 	def __init__(self,*args,**kwargs):
 		self.nopages = kwargs['nopages']
 		self.subreddit = kwargs['name']
-		self.activity = True
+		self.active = True
 		self.currpage = 1
 		self.url = "https://old.reddit.com/r/" + self.subreddit + "/"
 
@@ -185,27 +175,34 @@ class scraper:
 
 
 	def getmeme(self):
+		# extract one meme
 		if len(self.all_urls)>0:
 		    return self.extract()
 
+		# reached self.nopages
+		elif self.nopages==self.currpage:
+		    self.active = False
+		    print("reached page",self.nopages)
+		    return {}
+
+		# page ends
 		elif self.nopages>self.currpage:
 		    regex1 = "next-button.+?\"(.+?)\""
 		    pattern1 = re.compile(regex1)
 		    link1 = re.findall(pattern1,self.htmltext)
-		    print(link1)
+
+			# is it last page
 		    if(len(link1) < 4 and link1[0]=='desktop-onboarding-sign-up__form-note'): # dirty way of identifying last page
 		        print("reached subreddits' last page",self.currpage)
-		        self.activity = False
+		        self.active = False
 		        return {}
+
+			# move to next page
 		    else:
 		        self.url = link1[0]
 		        self.currpage += 1
 		        self.gethtml()
 		        return self.extract()
-		elif self.nopages==self.currpage:
-		    self.activity = False
-		    print("reached page",self.nopages)
-		    return {}
 
 class feature_extractor:
 
@@ -257,8 +254,9 @@ class feature_extractor:
 
 class clustering:
 
-	def __init__(self):
+	def __init__(self,*args,**kwargs):
 		self.md_feats = ''
+		self.th = kwargs['threshold']
 
 	def load_features(self,feats):
 		self.md_feats = feats
@@ -269,7 +267,7 @@ class clustering:
 
 
 	def gen_clusters(self):
-		th = 10 # threshold value
+		th = self.th # threshold value
 		self.md_feats[cells['feature_vector']] = self.md_feats[cells['feature_vector']].apply(lambda x:list(map(float,x.split(','))))
 
 		size0 = len(self.md_feats[cells['feature_vector']][0])
@@ -283,7 +281,9 @@ class clustering:
 		cls = self.cl(meandist-th*stddist,arr[:])
 
 		cluster_col = pd.Series(cls,name=cells['cluster_id'])
-		return self.md_feats[mindex].join(cluster_col)
+		result = self.md_feats[mindex].join(cluster_col)
+
+		return result
 
 class web_prepare:
 
@@ -305,14 +305,29 @@ class web_prepare:
 
 		t = csv[cells['cluster_id']].value_counts()
 		csv[cells['cluster_size']] = csv[cells['cluster_id']].map(lambda x:t[x])
-		csv2 = csv.drop_duplicates(subset=[cells['cluster_size'],cells['cluster_id']])
+		csv20 = pd.merge(csv,test).sort_values(by=cells['image_publ_date'])
+		csv2 = csv20.drop_duplicates(subset=[cells['cluster_size'],cells['cluster_id']])
 		csv3 = csv2.sort_values(by=cells['cluster_size'],ascending=False)
-		csv4 = csv3[csv3[cells['cluster_size']]>=self.cutoff]
+		csv4 = csv3[csv3[cells['cluster_size']]>=5][1:]
 
-		result = pd.merge(csv4,test)
+		result = csv4
 		return result
 
+def pick_th_optimal(ms,which):
+	df = pd.DataFrame(ms,columns=['th','nclust']).sort_values(by='nclust',ascending=False)
+	thmax = df['th'].iloc[0]
+	df2 = df[df['th']>=thmax]
+	return df2['th'].iloc[which]
 
+
+#argument parser
+parser = argparse.ArgumentParser(prog='all-in-one online tool')
+# parser.add_argument('--subreddit',type=str,default='memes',help='which subreddit to scrape; default=memes')
+# parser.add_argument('--nopages',type=int,default=10,help='how many pages to scrape, if -1 then alg scrapes everything; default=10')
+# parser.add_argument('--time',type=str,default='2020-01-01_00-00',help='scrape session timestamp')
+# parser.add_argument('--datadir',type=str,default=cfg.default_datadir,help='where downloaded data should be stored; default='+cfg.default_datadir)
+# parser.add_argument('--timelag',type=int,default=5,help='algorithm halt when connection limit is reached given in seconds; default=5')
+# parser.add_argument('--dlmethod',default='wgetpy',help='download methods: wgetpy, wget (UNIX only) and urllibdl; default=wgetpy')
 
 if __name__ == "__main__":
 	# tentative vars
@@ -328,7 +343,7 @@ if __name__ == "__main__":
 
 	#paths
 	analdir = 'anal'
-	analname = 'a02'
+	analname = 'a01'
 	analmd = 'md'
 	dir = os.path.join(analdir,analname)
 	mkdir(dir)
@@ -344,7 +359,7 @@ if __name__ == "__main__":
 		# load existing features metadata
 		md_feats = loadmd(md_featspath)
 		#load existing clusters metadata
-		md_cluster = loadmd(md_clusterspath)
+		md_clusters = loadmd(md_clusterspath)
 
 	else:
 		# create new main metadata
@@ -366,7 +381,7 @@ if __name__ == "__main__":
 	for subreddit,nopage in zip(subreddits,nopages):
 		scrap = scraper(name=subreddit,nopages=nopage)
 
-		while scrap.activity:
+		while scrap.active:
 			try:
 				#scraping
 				record = scrap.getmeme()
@@ -401,21 +416,42 @@ if __name__ == "__main__":
 				pass
 
 
-	#print(md_feats)
-	#input()
-	# clustering
-	print('clustering()')
-	clust = clustering()
-	clust.load_features(md_feats.copy())
-	md_clusters = clust.gen_clusters()
-	#input()
+	# th0 = 5
+	# ms = []
+	# nmeasures = 20
+	# # find optimal threshold
+	# for i in np.linspace(-1,.3,nmeasures):
+	# 	th = th0 + th0*i
+	#
+	# 	print('clustering('+str(th)+')')
+	# 	clust = clustering(threshold=th)
+	# 	clust.load_features(md_feats.copy())
+	# 	md_clusters = clust.gen_clusters()
+	#
+	# 	print('web_prepare(5)')
+	# 	wp = web_prepare(cluster_cutoff=5)
+	# 	wp.setmd(md.copy())
+	# 	wp.setmd_cluster(md_clusters.copy())
+	# 	md_web = wp.combine_web()
+	#
+	# 	noclusters = md_web.values.shape[0]
+	# 	print('# of clusters>5:',noclusters)
+	# 	ms.append([th,noclusters])
+	#
+	# # cluster/web_prepare with optimal threshold
+	# th_optimal = pick_th_optimal(ms,2)
+	# # clustering
+	# print('clustering('+str(th_optimal)+')')
+	# clust = clustering(threshold=th_optimal)
+	# clust.load_features(md_feats.copy())
+	# md_clusters = clust.gen_clusters()
+	md_clusters = loadmd(md_clusterspath)
 	# prepare for web
 	print('web_prepare()')
 	wp = web_prepare(cluster_cutoff=5)
-	wp.setmd(md)
-	wp.setmd_cluster(md_clusters)
+	wp.setmd(md.copy())
+	wp.setmd_cluster(md_clusters.copy())
 	md_web = wp.combine_web()
-	#input()
 
 	savemd(md,mdpath)
 	savemd(md_feats,md_featspath)
