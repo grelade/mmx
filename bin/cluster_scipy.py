@@ -1,61 +1,54 @@
-import pandas as pd
-import numpy as np
-import argparse
-import os
-import config as cfg
 import scipy.cluster.hierarchy as hcluster
+import numpy as np
+import config as cfg
+import pandas as pd
+
+# load columns names from config file
 
 
-parser = argparse.ArgumentParser(prog='scipy clustering tool')
-parser.add_argument('--metadata',default=None,type=str, help='metadata with extracted features') #
-parser.add_argument('--th',default=10,type=float, help='threshold value given as multiplicity of stds of interimage distances')
+class clustering:
 
-def run(*a,**kwargs):
+	def __init__(self,*args,**kwargs):
+		self.md_feats = ''
+		self.th = kwargs['threshold']
+		self.cells = cfg.metadata_columns
+		self.mindex = cfg.metadata_index_columns
 
-	default_args = vars(parser.parse_known_args()[0])
-	args = argparse.Namespace(**{**default_args,**kwargs})
-
-	# load metadata column names from config file
-	cells = cfg.metadata_columns
-	mindex = cfg.metadata_index_columns
-
-	dset = args.metadata
-	# similarity threshold
-	th = args.th
-
-	features = pd.read_csv(dset,sep='\t')
-	# map 'features' col from str to list
-	features[cells['feature_vector']] = features[cells['feature_vector']].apply(lambda x:list(map(float,x.split(','))))
-
-	size0 = len(features[cells['feature_vector']][0])
-	for i in range(0,size0):
-	    features['feat_'+str(i)] = features[cells['feature_vector']].apply(lambda x: x[i])
-	arr = features[['feat_'+str(i) for i in range(size0)]].to_numpy()
-
-	distances = [np.linalg.norm(arr[0]-arr[i]) for i in range(1,len(arr))]
-	meandist,stddist = np.mean(distances), np.std(distances)
+	def load_features(self,feats):
+		self.md_feats = feats
 
 	# clustering function
-	def cl(thr,arr):
+	def cl(self,thr,arr):
 	    return hcluster.fclusterdata(arr, thr, criterion="distance")
 
-	cls = cl(meandist-th*stddist,arr[:])
 
+	def gen_clusters(self):
+		th = self.th # threshold value
+		self.md_feats[self.cells['feature_vector']] = self.md_feats[self.cells['feature_vector']].apply(lambda x:list(map(float,x.split(','))))
 
-	cluster_col = pd.Series(cls,name=cells['cluster_id'])
-	cluster_features = features[mindex].join(cluster_col)
+		size0 = len(self.md_feats[self.cells['feature_vector']][0])
+		for i in range(0,size0):
+		    self.md_feats['feat_'+str(i)] = self.md_feats[self.cells['feature_vector']].apply(lambda x: x[i])
+		arr = self.md_feats[['feat_'+str(i) for i in range(size0)]].to_numpy()
 
+		distances = [np.linalg.norm(arr[0]-arr[i]) for i in range(1,len(arr))]
+		meandist,stddist = np.mean(distances), np.std(distances)
 
-	destination_dir = os.path.dirname(dset)
-	source_filename = os.path.splitext(dset)[0].split(os.sep)[-1]
-	tsv_name = os.path.join(destination_dir, '{}_clusterscipy.tsv'.format(source_filename))
+		cls = self.cl(meandist-th*stddist,arr[:])
 
+		cluster_col = pd.Series(cls,name=self.cells['cluster_id'])
+		result = self.md_feats[self.mindex].join(cluster_col)
 
-	# export
-	cluster_features = cluster_features.set_index(mindex)
-	cluster_features.to_csv(tsv_name,sep='\t')
+		return result
 
+if __name__ == "__main__":
 
-if __name__ == '__main__':
+	parser = argparse.ArgumentParser(prog='cluster tool')
+	# parser.add_argument('--subreddit',type=str,default='memes',help='which subreddit to scrape; default=memes')
+	# parser.add_argument('--nopages',type=int,default=10,help='how many pages to scrape, if -1 then alg scrapes everything; default=10')
+	# parser.add_argument('--time',type=str,default='2020-01-01_00-00',help='scrape session timestamp')
+	# parser.add_argument('--datadir',type=str,default=cfg.default_datadir,help='where downloaded data should be stored; default='+cfg.default_datadir)
+	# parser.add_argument('--timelag',type=int,default=5,help='algorithm halt when connection limit is reached given in seconds; default=5')
+	# parser.add_argument('--dlmethod',default='wgetpy',help='download methods: wgetpy, wget (UNIX only) and urllibdl; default=wgetpy')
+
 	args = parser.parse_args()
-	run(**vars(args))

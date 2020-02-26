@@ -28,5 +28,9 @@ metadata_columns = {'id':'id',
 # columns making up the multi-index
 metadata_index_columns = list(map(metadata_columns.get,['id','scrape_time','scrape_source']))
 
+md_cols = metadata_index_columns + [metadata_columns['image_filename'],metadata_columns['image_title'],metadata_columns['image_upvotes'],metadata_columns['no_of_comments'],metadata_columns['image_publ_date'],metadata_columns['image_url']]
+md_feats_cols = metadata_index_columns + [metadata_columns['feature_vector']]
+md_clusters_cols = metadata_index_columns + [metadata_columns['cluster_id']]
+
 # which image types to scrape
 filetypes = ['jpg','jpeg','png','gif'] # (!) gifs included
