@@ -1,11 +1,10 @@
-## memsEX
-tool for meme popularity analysis. backbone of [this website](https://grelade.pythonanywhere.com).
+## What is memsEX?
+AI powered meme analysis tool. 
 
-## based on:
-* [clustering alg](https://github.com/zegami/image-similarity-clustering)
-* [memescraper](https://github.com/Salil-Jain/memescraper)
+## Ways to go:
 
-## ways to go:
+To make it work, simply run the flask server:
+
 
 memsEX has two basic ways of work:
 - **hoard** is essentially dedicated for *offline* use on your pc:
@@ -18,6 +17,11 @@ memsEX has two basic ways of work:
     * only optimal clustering analysis
 
 In short, hoarding is heavyweight while harvesting tries to keep it as light as possible.
+
+## based on:
+* [clustering alg](https://github.com/zegami/image-similarity-clustering)
+* [memescraper](https://github.com/Salil-Jain/memescraper)
+
 
 ## usage:
 - to **hoard** run:

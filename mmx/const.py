@@ -1,3 +1,5 @@
+from pymongo import DESCENDING as desc, ASCENDING as asc
+
 #scraping.scraper_reddit consts
 BASEURL_REDDIT = "https://old.reddit.com/r/"
 SUBREDDITS = ['memes','dankmemes','wholesomememes','MemeEconomy','AdviceAnimals','ComedyCemetery','terriblefacebookmemes','funny']
@@ -26,6 +28,8 @@ CLUSTERS_COL_DENSTREAM_STATE_DICT = 'denstream_state_dict'
 
 #core.mmx_server consts
 MONGODB_URL = 'mongodb://localhost:27017'
+DESCENDING = desc
+ASCENDING = asc
 MAIN_DB = 'mmx'
 MEMES_COLLECTION = 'memes'
 CLUSTERS_COLLECTION = 'clusters'

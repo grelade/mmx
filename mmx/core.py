@@ -1,6 +1,6 @@
 import numpy as np
 from tqdm import tqdm
-from pymongo import MongoClient, DESCENDING, ASCENDING
+# from pymongo import MongoClient, DESCENDING, ASCENDING
 from pymongo.errors import BulkWriteError
 from typing import Union, Dict, List, Tuple
 

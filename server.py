@@ -4,6 +4,7 @@ from datetime import datetime, timedelta
 from tqdm import tqdm
 
 from mmx.core import mmx_server
+from mmx.const import *
 
 server = mmx_server(verbose = True)
 
@@ -39,7 +40,10 @@ app = Flask(__name__)
 
 @app.route("/api/clusters")
 def fetch_clusters():
-    return 'jiojio'
+    sorting_criterion = (f'{CLUSTERS_COL_SNAPSHOT}.{CLUSTERS_COL_SNAPSHOT_TIMESTAMP}', DESCENDING)
+    result = server.clusters_col.find({},sort=[sorting_criterion])
+    output = next(result)
+    return output
 
 @app.route("/api/memes")
 def fetch_memes():

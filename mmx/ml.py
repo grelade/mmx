@@ -70,8 +70,16 @@ class feat_extract:
 
     @staticmethod
     def image_url_to_tensor(image_url: str) -> Union[torch.Tensor,None]:
+
         temp_path = download_url(image_url = image_url)
-        img = read_image(temp_path, mode = ImageReadMode.RGB) if temp_path else None
+        img = None
+        try:
+            if temp_path:
+                img = read_image(temp_path, mode = ImageReadMode.RGB)
+
+        except RuntimeError as e:
+            print(f'read_image({image_url}) error: {e}')
+
         return img
 
     def get_features(self, image_tensor: torch.Tensor) -> Union[np.ndarray,None]:
