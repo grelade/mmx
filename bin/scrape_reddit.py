@@ -1,8 +1,40 @@
-import tools
 import re
-import config as cfg
 from datetime import datetime
 import os
+import urllib
+
+from .config import METADATA_COLUMNS,METADATA_INDEX_COLUMNS,IMAGE_FILETYPES
+
+# download whole html file
+def geturl(urls):
+	'''download html data of urls using urllib'''
+	print('geturl URL:',urls)
+	htmltext = ''
+	ifsuccesful = False
+	tries = 0
+	limit = 25
+
+	while not ifsuccesful and tries < limit:
+		try:
+			htmlfile = urllib.request.urlopen(urls)
+			htmltext = htmlfile.read().decode("utf-8")
+			ifsuccesful = True
+
+		except urllib.error.HTTPError:
+			print('reached connection limit: sleeping')
+			time.sleep(20)
+			tries = tries + 1
+			continue
+		except ValueError:
+			print('ValueError detected!')
+			tries = tries + 1
+			continue
+		except:
+			print('catched other error: ',sys.exc_info()[0])
+			tries = tries + 1
+			continue
+
+		return htmltext
 
 class scraper:
 
@@ -22,11 +54,11 @@ class scraper:
 		self.publdate=''
 
 		self.gethtml()
-		self.cells = cfg.metadata_columns
-		self.mindex = cfg.metadata_index_columns
+		self.cells = METADATA_COLUMNS
+		self.mindex = METADATA_INDEX_COLUMNS
 
 	def gethtml(self):
-		self.htmltext = tools.geturl(self.url)
+		self.htmltext = geturl(self.url)
 
 		# regex to find urls
 		#these_regex = "data-url=\"(.+?)\""
@@ -70,7 +102,7 @@ class scraper:
 
         # regex to identify extensions
         #ext_regex = "\.(jpg|jpeg|png|gif)"
-		ext_regex = "\.("+(''.join(map(lambda x:x+'|',cfg.filetypes))[:-1])+")"
+		ext_regex = "\.("+(''.join(map(lambda x:x+'|',IMAGE_FILETYPES))[:-1])+")"
 		ext_pattern = re.compile(ext_regex)
 		ext = re.findall(ext_pattern,currurl)
 

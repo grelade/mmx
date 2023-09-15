@@ -2,7 +2,7 @@ import wget as wg
 import subprocess
 import time
 import urllib
-import config as cfg
+# import config as cfg
 import os
 import pandas as pd
 import sys
@@ -36,37 +36,6 @@ def wget(url,out):
 			print('timeout reached:',e)
 			continue
 
-
-# download whole html file
-def geturl(urls):
-	'''download html data of urls using urllib'''
-	print('geturl URL:',urls)
-	htmltext = ''
-	ifsuccesful = False
-	tries = 0
-	limit = 25
-
-	while not ifsuccesful and tries < limit:
-		try:
-			htmlfile = urllib.request.urlopen(urls)
-			htmltext = htmlfile.read().decode("utf-8")
-			ifsuccesful = True
-
-		except urllib.error.HTTPError:
-			print('reached connection limit: sleeping')
-			time.sleep(20)
-			tries = tries + 1
-			continue
-		except ValueError:
-			print('ValueError detected!')
-			tries = tries + 1
-			continue
-		except:
-			print('catched other error: ',sys.exc_info()[0])
-			tries = tries + 1
-			continue
-
-		return htmltext
 
 # save metadata
 def savemd(log,logpath):
