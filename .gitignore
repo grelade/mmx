@@ -1,10 +1,6 @@
-anal/
-data/
 .ipynb_checkpoints
-notebook.ipynb
 *.ipynb
 bin/__pycache__
-anal_online.py
-anal_umap.py
 __pycache__
-old-stuff
+.vscode/
+.venv/
