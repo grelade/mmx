@@ -2,6 +2,8 @@ from pymongo import MongoClient
 from pymongo.errors import BulkWriteError
 from typing import Union, Dict, List, Tuple
 
+from .const import *
+
 class mmx_api:
 
     def __init__(self, verbose: bool = False):

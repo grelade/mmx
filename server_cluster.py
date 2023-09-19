@@ -4,6 +4,10 @@ from time import sleep
 
 from mmx.core import mmx_server
 from mmx.const import *
+from mmx.utils import is_mmx_configured
+
+if not is_mmx_configured():
+    exit()
 
 server = mmx_server(verbose = True)
 
@@ -23,6 +27,7 @@ job = scheduler.add_job(mmx_clustering_job,
 scheduler.start()
 
 print('running server_cluster.py')
+
 while True:
     sleep(1)
 
