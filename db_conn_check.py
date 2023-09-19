@@ -21,4 +21,8 @@ def test_mongodb_connection(mongodb_url):
         return None
 
 
-mongodb = test_mongodb_connection(MONGODB_URL)
+mongodb_url = input(f'check server [default = {MONGODB_URL}]')
+if mongodb_url == "":
+    mongodb_url = MONGODB_URL
+
+mongodb = test_mongodb_connection(mongodb_url)
