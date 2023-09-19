@@ -2,9 +2,9 @@
 <a href="">AI-powered meme analysis tool</a>. Consists of two main parts:
 
 - **scraping module**: Continously scans and extracts memes from the most popular subreddits.
-- **clustering AI module**: Finds meme clusters using DBSCAN algorithm with feature extraction based on a pretrained neural network.
+- **clustering AI module**: Finds meme clusters using dynamical DBSCAN or static HCLUSTER algorithms with feature extraction based on a pretrained neural network.
 
-Both modules run independently through server-like apps. Data is stored in mongodb database and can be extracted via REST API.
+Both modules run independently through server-like apps. Data is stored in mongodb database and is extracted via REST API.
 
 ## How to run it:
 1. You need to setup the mongodb database by running the script:

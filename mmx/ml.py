@@ -125,13 +125,18 @@ class hcluster_clustering:
 
         self.base_threshold = base_threshold
         self.alg_func = hcluster_wrapper(base_threshold = self.base_threshold)
+        self.labels = None
+        self.meme_ids = None
+        self.clusters = None
         self.verbose = verbose
 
     def append_data(self, data: List[Dict]) -> None:
 
         features = []
+        meme_ids = []
         for meme in data:
             features.append(meme[MEMES_COL_FEAT_VEC])
+            meme_ids.append(meme[MEMES_COL_ID])
         features = np.array(features)
 
         # distances = [np.linalg.norm(features[0]-features[i]) for i in range(1,len(features))]
@@ -144,9 +149,22 @@ class hcluster_clustering:
 
         threshold = meandist-self.base_threshold*stddist
         self.labels = self.alg_func(features, threshold)
+        self.meme_ids = meme_ids
 
-    def fetch_clusters(self) -> List:
-        return self.labels.tolist()
+    def form_clusters(self) -> None:
+        if not (self.labels is None):
+            mids = np.array(self.meme_ids)
+            lbls = np.array(self.labels)
+
+            clusters = []
+            for lbl in np.unique(lbls):
+                clusters.append(mids[np.argwhere(lbls==lbl)].reshape(-1).tolist())
+
+            clusters.sort(key= lambda x: len(x),reverse=True)
+            self.clusters = clusters
+        else:
+            print('no data! run append_data')
+
 
 class hcluster_wrapper:
     '''
@@ -195,6 +213,9 @@ class denstream_clustering:
 
         # label_metrics_list = [metrics.homogeneity_score, metrics.completeness_score]
         self.alg_func = DenStream(eps, beta, mu, lambd, min_samples)
+        # self.labels = None
+        # self.meme_ids = None
+        self.clusters = None
         self.verbose = verbose
 
     def append_datum(self, datum: np.ndarray, data_id: str, timestamp: int) -> None:
@@ -219,10 +240,12 @@ class denstream_clustering:
                                 data_id = meme_id,
                                 timestamp = publ_timestamp)
 
-    def fetch_clusters(self) -> List:
+    def form_clusters(self) -> None:
+        self.clusters = None
+    # def fetch_clusters(self) -> List:
         # clusters = self.ds._cluster_evaluate(self.ds.iterations)
         # clusters = self.ds.p_micro_clusters
         # clusters = [x.id_array for x in clusters]
         # return clusters.tolist()
-        return None
+
 

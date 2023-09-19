@@ -21,7 +21,7 @@ CLUSTERS_COL_SNAPSHOT = 'snapshot'
 CLUSTERS_COL_SNAPSHOT_TIMESTAMP = 'timestamp'
 CLUSTERS_COL_SNAPSHOT_NTOTAL = 'data_total'
 CLUSTERS_COL_SNAPSHOT_HASH = 'data_hash'
-CLUSTERS_COL_LABELS = 'data_labels'
+CLUSTERS_COL_CLUSTERED_IDS = 'data_clustered_ids'
 CLUSTERS_COL_CLUSTERING_STATE_DICT = 'state_dict'
 
 
@@ -39,7 +39,7 @@ CLUSTERING_MODEL = 'hcluster'
 
 # clustering parameters
 # CLUSTERING_BATCH_SIZE = None
-CLUSTERING_BATCH_SIZE = 100
+CLUSTERING_BATCH_SIZE = 500
 
 # denstream_clustering algorithm parameters
 DENSTREAM_EPS = 12

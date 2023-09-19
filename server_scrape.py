@@ -9,7 +9,7 @@ server = mmx_server(verbose = True)
 
 def mmx_scraping_job():
     print('='*100)
-    print('#'*25+' running mmx_scraping_job() ' + '#'*25)
+    print('#'*25 + f' running mmx_scraping_job(minutes={SCRAPING_JOB_INTERVAL}) ' + '#'*25)
     server.exec_meme_scraping_feat_extract_run()
 
 tnow = datetime.now()

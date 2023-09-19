@@ -7,7 +7,7 @@ from typing import Union, Dict, List, Tuple
 from .scraping import scraper_reddit
 from .ml import feat_extract,denstream_clustering, hcluster_clustering
 from .const import *
-from .utils import hash_string
+from .utils import hash_string, print_red, print_green
 
 class mmx_server:
 
@@ -166,7 +166,7 @@ class mmx_server:
         init_snapshot_info_dict = {CLUSTERS_COL_SNAPSHOT_TIMESTAMP: 0,
                                    CLUSTERS_COL_SNAPSHOT_NTOTAL: 0,
                                    CLUSTERS_COL_SNAPSHOT_HASH: hash_string(''),
-                                   CLUSTERS_COL_LABELS : None}
+                                   CLUSTERS_COL_CLUSTERED_IDS : None}
 
         init_denstream_state_dict = self._clustering_module_func().alg_func.state_dict_compressed()
         init_snapshot = {CLUSTERS_COL_SNAPSHOT: init_snapshot_info_dict,
@@ -238,7 +238,34 @@ class mmx_server:
 
         return True
 
-    def _find_last_consistent_first_inconsistent_clustering_snapshot(self) -> Tuple[Dict, Dict]:
+    def _find_last_consistent_first_inconsistent_clustering_snapshot(self) -> Tuple[Dict,Dict]:
+        sort_criterion = (f'{CLUSTERS_COL_SNAPSHOT}.{CLUSTERS_COL_SNAPSHOT_TIMESTAMP}', ASCENDING)
+        result = self.clusters_col.find({},sort=[sort_criterion])
+
+        clustering_snapshots = [self._get_init_clustering_snapshot()]
+        for r in result:
+            clustering_snapshots.append(r)
+
+        # no snapshots in db
+        if len(clustering_snapshots) == 0:
+            return self._get_init_clustering_snapshot(), None
+
+        # find first inconsistent snapshot, if it exists
+        clustering_snapshot_fi = None
+        for ix in range(len(clustering_snapshots)):
+            if not self._is_clustering_snapshot_consistent(clustering_snapshots[ix]):
+                clustering_snapshot_fi = clustering_snapshots[ix]
+                break
+        if clustering_snapshot_fi:
+            clustering_snapshot_fi = clustering_snapshots[ix]
+            clustering_snapshot_lc = clustering_snapshots[ix-1]
+        else:
+            # no inconsistencies found
+            clustering_snapshot_lc = clustering_snapshots[-1]
+
+        return clustering_snapshot_lc, clustering_snapshot_fi
+
+    def _find_last_consistent_first_inconsistent_clustering_snapshot_old(self) -> Tuple[Dict, Dict]:
         '''
         go through the snapshots and find the last consistent snapshot and first incosistent snapshot
         '''
@@ -326,11 +353,11 @@ class mmx_server:
         hash_base = previous_clustering_snapshot[CLUSTERS_COL_SNAPSHOT][CLUSTERS_COL_SNAPSHOT_HASH]
         new_string_repr = mmx_server._form_string_repr(new_data)
         new_hash = hash_string(hash_base + new_string_repr)
-        new_labels = self.clustering_module.fetch_clusters()
+        new_clustered_ids = self.clustering_module.clusters
         new_snapshot_info_dict = {CLUSTERS_COL_SNAPSHOT_TIMESTAMP: new_timestamp,
                                     CLUSTERS_COL_SNAPSHOT_NTOTAL: new_ntotal,
                                     CLUSTERS_COL_SNAPSHOT_HASH: new_hash,
-                                    CLUSTERS_COL_LABELS: new_labels}
+                                    CLUSTERS_COL_CLUSTERED_IDS: new_clustered_ids}
         new_clustering_state_dict = self.clustering_module.alg_func.state_dict_compressed()
 
         new_clustering_snapshot = {CLUSTERS_COL_SNAPSHOT: new_snapshot_info_dict,
@@ -357,12 +384,15 @@ class mmx_server:
         for r in result:
             clustering_snapshots.append(r)
 
+        print_func =  print_green
         for snapshot in clustering_snapshots:
             timestamp = snapshot[CLUSTERS_COL_SNAPSHOT][CLUSTERS_COL_SNAPSHOT_TIMESTAMP]
             hash = snapshot[CLUSTERS_COL_SNAPSHOT][CLUSTERS_COL_SNAPSHOT_HASH]
             ntotal = snapshot[CLUSTERS_COL_SNAPSHOT][CLUSTERS_COL_SNAPSHOT_NTOTAL]
-            is_consistent = {True:'C',False:'I'}[self._is_clustering_snapshot_consistent(snapshot)]
-            print(f'{is_consistent} | {timestamp:13d} | {ntotal:6d} | {hash}')
+            is_consistent_flag = self._is_clustering_snapshot_consistent(snapshot)
+            if not is_consistent_flag: print_func = print_red
+            is_consistent = {True:'C',False:'I'}[is_consistent_flag]
+            print_func(f'{is_consistent} | {timestamp:13d} | {ntotal:6d} | {hash}')
 
 
     # main functions
@@ -426,13 +456,18 @@ class mmx_server:
             timestamp_max = self._read_most_recent_memes_timestamp_from_db()
             new_memes = self._read_memes_between_timestamps(timestamp_min = timestamp_min, timestamp_max = timestamp_max)
 
+
             if CLUSTERING_BATCH_SIZE:
                 new_memes = new_memes[:CLUSTERING_BATCH_SIZE]
+                cluster_condition = len(new_memes) == CLUSTERING_BATCH_SIZE
+            else:
+                cluster_condition = len(new_memes) > 0
 
-            if len(new_memes) > 0:
+            if cluster_condition:
                 # run clustering
                 if self.verbose: print('Run clustering...')
                 self.clustering_module.append_data(new_memes)
+                self.clustering_module.form_clusters()
 
                 # save the results as a snapshot
                 new_clustering_snapshot = self._form_next_clustering_snapshot(new_data = new_memes,

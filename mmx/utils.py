@@ -80,3 +80,6 @@ def parse_json(data):
         dict_data = dict_data[0]
 
     return dict_data
+
+def print_red(skk): print("\033[91m {}\033[00m" .format(skk))
+def print_green(skk): print("\033[90m {}\033[00m" .format(skk))
