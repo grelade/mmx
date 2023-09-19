@@ -3,6 +3,8 @@ import os
 import wget
 from urllib.error import HTTPError, ContentTooShortError
 from urllib.parse import urlparse
+from bson import json_util
+import json
 
 def hash_string(input_string):
     # Create a new SHA-256 hash object
@@ -50,8 +52,31 @@ def download_url(image_url: str) -> str:
         except ValueError:
             print(f'ValueError: problem with image_url={image_url}; incorrect url form')
             break
+        except AttributeError:
+            print(f'AttributeError: problem with image_url={image_url}; ???')
+            break
         except ContentTooShortError:
             print(f'ContentTooShortError: problem with image_url={image_url}; incomplete downlaod; resuming')
             pass
 
     return path
+
+def parse_json(data):
+    '''
+    parse data from mongodb to json
+    '''
+    data = json_util.dumps(data)
+    dict_data = json.loads(data)
+
+    convert = False
+    if not isinstance(dict_data,list):
+        convert = True
+        dict_data = [dict_data]
+
+    for i in range(len(dict_data)):
+        dict_data[i]['_id'] = dict_data[i]['_id']["$oid"]
+
+    if convert:
+        dict_data = dict_data[0]
+
+    return dict_data

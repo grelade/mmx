@@ -85,8 +85,13 @@ class DenStream:
         :param feature_array: array for a given data point. Must have the shape (1, num_features).
         :return: Index which specifies the closest cluster to the point p (feature_array).
         """
-
+        # print(len(cluster_list))
+        # if len(cluster_list)>0:
+        #     print(cluster_list[0].center.shape)
         cluster_centers = np.concatenate([c.center for c in cluster_list], axis=0)
+        # print(cluster_centers.shape)
+        # input()
+        # cluster_centers = np.concatenate([c.center for c in cluster_list], axis=1).T
         dist = np.linalg.norm(feature_array - cluster_centers, axis=1, ord=self.distance_measure)
         closest_cluster_index = np.argmin(dist)
         return int(closest_cluster_index)
@@ -114,7 +119,9 @@ class DenStream:
         """
 
         if len(self.p_micro_clusters) > 0:
+
             closest_p_index = self._find_closest_cluster(self.p_micro_clusters, feature_array)
+
             closest_p_cluster = self.p_micro_clusters[closest_p_index]
 
             closest_p_cluster.append(current_time, feature_array, label, data_id)
@@ -127,6 +134,7 @@ class DenStream:
                 closest_p_cluster.pop()
 
         if len(self.o_micro_clusters) > 0:
+
             closest_o_index = self._find_closest_cluster(self.o_micro_clusters, feature_array)
             closest_o_cluster = self.o_micro_clusters[closest_o_index]
 
@@ -309,7 +317,6 @@ class DenStream:
 
         predicted_labels = self._request_clustering()
 
-        # print(predicted_labels)
         self.current_predicted_labels = predicted_labels
 
         if len(predicted_labels) > 0:
@@ -327,6 +334,9 @@ class DenStream:
                 self.metrics_results.append({"iteration": iteration, "metrics": metrics})
         else:
             self.metrics_results.append({"iteration": iteration, "metrics": None})
+
+
+        print(len(self.current_predicted_labels), self.current_predicted_labels)
 
     def _request_clustering(self) -> np.ndarray:
         """
@@ -491,8 +501,24 @@ class DenStream:
                                'model_state_dict': state_dict['model'].__dict__}
         return state_dict
 
+    def state_dict_compressed(self):
+        '''
+        Returning a state_dict with redundant features_array dropped. This version is stored in mongodb.
+        '''
+        state_dict = self.state_dict().copy()
+        for keys in ['o_micro_clusters','p_micro_clusters','completed_o_clusters','completed_p_clusters']:
+            for mc in state_dict[keys]:
+                del mc['features_array']
+                mc['time_array'] = mc['time_array'].reshape(-1).tolist()
+                mc['labels_array'] = mc['labels_array'].tolist()
+                mc['id_array'] = mc['id_array'].tolist()
+                mc['weight'] = mc['weight'].tolist()
+                mc['center'] = mc['center'].reshape(-1).tolist()
+        return state_dict
+
     def load_state_dict(self,state_dict):
 
+        state_dict = state_dict.copy()
         def load_mc(state_dicts):
             mcs = [micro_cluster.MicroCluster() for _ in range(len(state_dicts))]
             for mc,state_dict in zip(mcs,state_dicts):
@@ -504,13 +530,26 @@ class DenStream:
         state_dict['completed_o_clusters'] = load_mc(state_dict['completed_o_clusters'])
         state_dict['completed_p_clusters'] = load_mc(state_dict['completed_p_clusters'])
 
-        # state_dict['p_micro_clusters'] = [micro_cluster.MicroCluster().load_state_dict(mc_dict) for mc_dict in state_dict['p_micro_clusters']]
-        # state_dict['completed_o_clusters'] = [micro_cluster.MicroCluster().load_state_dict(mc_dict) for mc_dict in state_dict['completed_o_clusters']]
-        # state_dict['completed_p_clusters'] = [micro_cluster.MicroCluster().load_state_dict(mc_dict) for mc_dict in state_dict['completed_p_clusters']]
-
         if state_dict['model']['model_type'] == 'DBSCAN':
             state_dict['model'] = sklearn.cluster.DBSCAN(**state_dict['model']['model_state_dict'])
         else:
             print(f'''unknown model type {state_dict['model']['model_type']}''')
 
         self.__dict__.update(state_dict)
+
+    def load_state_dict_compressed(self,state_dict_compressed,decompressor_func):
+        '''
+        Takes in a state_dict_compressed and restores it with the use of
+        decompressor_func which uses the meme_id data to obtain the features_array.
+        '''
+        state_dict = state_dict_compressed.copy()
+        for keys in ['o_micro_clusters','p_micro_clusters','completed_o_clusters','completed_p_clusters']:
+            for mc in state_dict[keys]:
+                mc['features_array'] = decompressor_func(mc['id_array'])
+                mc['time_array'] = np.array(mc['time_array']).reshape(-1,1)
+                mc['labels_array'] = np.array(mc['labels_array'])
+                mc['id_array'] = np.array(mc['id_array'])
+                mc['weight'] = np.array(mc['weight'])
+                mc['center'] = np.array(mc['center']).reshape(1,-1)
+
+        self.load_state_dict(state_dict)

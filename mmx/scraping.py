@@ -123,9 +123,9 @@ class scraper_reddit:
         else:
             return nextpage_url[0]
 
-    def fetch_memes(self,
-                    n_pages: int = -1,
-                    end_at_timestamp: int = None) -> Dict:
+    def _fetch_memes_to_data_dict(self,
+                                  n_pages: int = -1,
+                                  end_at_timestamp: int = None) -> Dict:
 
         # small helper conversion function
         str2int = lambda data: [int(x) for x in data]
@@ -212,4 +212,31 @@ class scraper_reddit:
                 MEMES_COL_PUBL_TIMESTAMP: publ_timestamps,
                 MEMES_COL_SUBREDDIT: subreddits}
 
+    @staticmethod
+    def _convert_data_dict_to_db_list(data_dict: Dict) -> List:
+        '''
+        convert memes data dictionary returned by the self._fetch_memes_to_data_dict to a mongodb-friendly list of records
+        '''
+        keys = data_dict.keys()
+        arr = [data_dict[k] for k in keys]
+        db_list = []
+        for values in zip(*arr):
+            rec = dict()
+            for k,v in zip(keys,values):
+                if isinstance(v,np.int64):
+                    v = int(v)
+                elif isinstance(v,np.ndarray):
+                    v = v.tolist()
+                rec[k] = v
+            db_list.append(rec)
+
+        return db_list
+
+    def fetch_memes(self,
+                    n_pages: int = -1,
+                    end_at_timestamp: int = None) -> List:
+
+        data_dict = self._fetch_memes_to_data_dict(n_pages = n_pages, end_at_timestamp = end_at_timestamp)
+        memes = scraper_reddit._convert_data_dict_to_db_list(data_dict)
+        return memes
 

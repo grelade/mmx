@@ -1,59 +1,43 @@
 import numpy as np
 from tqdm import tqdm
-# from pymongo import MongoClient, DESCENDING, ASCENDING
+from pymongo import MongoClient
 from pymongo.errors import BulkWriteError
 from typing import Union, Dict, List, Tuple
 
 from .scraping import scraper_reddit
-from .ml import feat_extract,denstream_clustering
+from .ml import feat_extract,denstream_clustering, hcluster_clustering
 from .const import *
 from .utils import hash_string
 
 class mmx_server:
 
-    def __init__(self, verbose = False):
+    def __init__(self, verbose: bool = False):
+
         self.scraping_module = scraper_reddit(verbose = verbose)
         self.feature_extracting_module = feat_extract(model = FEAT_EXTRACT_MODEL, verbose = verbose)
-        self.clustering_module = denstream_clustering(verbose = verbose)
+
+        if CLUSTERING_MODEL == 'denstream':
+            self._clustering_module_func = denstream_clustering
+        elif CLUSTERING_MODEL == 'hcluster':
+            self._clustering_module_func = hcluster_clustering
+        self.clustering_module = self._clustering_module_func(verbose = verbose)
+
         self.mongodb = MongoClient(MONGODB_URL)
         self.memes_col = self.mongodb[MAIN_DB][MEMES_COLLECTION]
         self.clusters_col = self.mongodb[MAIN_DB][CLUSTERS_COLLECTION]
-        # self.snapshots_col = self.mongodb[MAIN_DB][SNAPSHOTS_COLLECTION]
 
         self.verbose = verbose
 
-
     # memes
-    @staticmethod
-    def _convert_data_dict_to_db_list(data_dict: Dict) -> List:
-        '''
-        convert memes data dictionary returned by the self.scraping_module to a mongodb-friendly list of records
-        '''
-        keys = data_dict.keys()
-        arr = [data_dict[k] for k in keys]
-        db_list = []
-        for values in zip(*arr):
-            rec = dict()
-            for k,v in zip(keys,values):
-                if isinstance(v,np.int64):
-                    v = int(v)
-                elif isinstance(v,np.ndarray):
-                    v = v.tolist()
-                rec[k] = v
-            db_list.append(rec)
-
-        return db_list
-
-    def _write_memes_to_db(self,memes: Union[Dict,List]) -> bool:
+    def _write_memes_to_db(self, memes: List[Dict]) -> bool:
         if self.verbose: print('_write_memes_to_db')
-        if isinstance(memes,Dict):
-            memes = mmx_server._convert_data_dict_to_db_list(memes)
 
         # do nothing when no memes to write
         if len(memes)==0:
             return True
 
         try:
+            memes = self._validate_memes(memes, send_to_db = True)
             result = self.memes_col.insert_many(memes)
             return result.acknowledged
         except BulkWriteError as e:
@@ -63,19 +47,99 @@ class mmx_server:
     def _read_memes_from_db(self) -> List:
         pass
 
+    def _validate_meme(self, meme: Dict, send_to_db: bool = False) -> Dict:
+        '''
+        ensure memes extracted from mongodb are in the correct format used in the mmx_server.
+        if send_to_db = True, validate meme record to fit the mongodb format instead.
+        '''
+        keys = [MEMES_COL_ID,MEMES_COL_IMAGE_URL,MEMES_COL_TITLE,MEMES_COL_UPVOTES,MEMES_COL_COMMENTS,MEMES_COL_PUBL_TIMESTAMP,MEMES_COL_SUBREDDIT]
+
+        # msg = ''
+        # for key in keys+[MEMES_COL_FEAT_VEC]:
+        #     if key in meme.keys():
+        #         msg+=f'{key}, {type(meme[key])} '
+        # print(msg)
+
+        meme = meme.copy()
+        # ensure no lists are in the record (besides feat_vec)
+
+        for key in keys:
+            if key in meme.keys():
+                if isinstance(meme[key],list):
+                    meme[key] = meme[key][0]
+
+        # ensure correct types are passed on
+        if MEMES_COL_ID in meme.keys():
+            if not isinstance(meme[MEMES_COL_ID],str):
+                meme[MEMES_COL_ID] = str(meme[MEMES_COL_ID])
+
+        if MEMES_COL_IMAGE_URL in meme.keys():
+            if not isinstance(meme[MEMES_COL_IMAGE_URL],str):
+                meme[MEMES_COL_IMAGE_URL] = str(meme[MEMES_COL_IMAGE_URL])
+
+        if MEMES_COL_TITLE in meme.keys():
+            if not isinstance(meme[MEMES_COL_TITLE],str):
+                meme[MEMES_COL_TITLE] = str(meme[MEMES_COL_TITLE])
+
+        if MEMES_COL_UPVOTES in meme.keys():
+            if not isinstance(meme[MEMES_COL_UPVOTES],int):
+                meme[MEMES_COL_UPVOTES] = int(meme[MEMES_COL_UPVOTES])
+
+        if MEMES_COL_COMMENTS in meme.keys():
+            if not isinstance(meme[MEMES_COL_COMMENTS],int):
+                meme[MEMES_COL_COMMENTS] = int(meme[MEMES_COL_COMMENTS])
+
+        if MEMES_COL_PUBL_TIMESTAMP in meme.keys():
+            if not isinstance(meme[MEMES_COL_PUBL_TIMESTAMP],int):
+                meme[MEMES_COL_PUBL_TIMESTAMP] = int(meme[MEMES_COL_PUBL_TIMESTAMP])
+
+        if MEMES_COL_SUBREDDIT in meme.keys():
+            if not isinstance(meme[MEMES_COL_SUBREDDIT],str):
+                meme[MEMES_COL_SUBREDDIT] = str(meme[MEMES_COL_SUBREDDIT])
+
+        if send_to_db:
+            # mongodb does not accept np.ndarrays
+            if MEMES_COL_FEAT_VEC in meme.keys():
+                if isinstance(meme[MEMES_COL_FEAT_VEC],np.ndarray):
+                    meme[MEMES_COL_FEAT_VEC] = meme[MEMES_COL_FEAT_VEC].reshape(-1)
+                    meme[MEMES_COL_FEAT_VEC] = meme[MEMES_COL_FEAT_VEC].tolist()
+        else:
+            # mmx_server works on np.ndarrays
+            if MEMES_COL_FEAT_VEC in meme.keys():
+                if isinstance(meme[MEMES_COL_FEAT_VEC],list):
+                    meme[MEMES_COL_FEAT_VEC] = np.array(meme[MEMES_COL_FEAT_VEC])
+
+        # msg = ''
+        # for key in keys+[MEMES_COL_FEAT_VEC]:
+        #     if key in meme.keys():
+        #         msg+=f'{key}, {type(meme[key])} '
+        # print(msg)
+
+        return meme
+
+    def _validate_memes(self, memes: List, send_to_db: bool = False) -> List:
+        '''
+        ensure memes extracted from and put into mongodb are in the mmx_server format.
+        if send_to_db = True, validate meme record to fit the mongodb format instead.
+        '''
+        for i in range(len(memes)):
+            memes[i] = self._validate_meme(memes[i], send_to_db = send_to_db)
+        return memes
+
     def _read_memes_between_timestamps(self, timestamp_min: int, timestamp_max: int) -> List:
         '''
         reads all memes between timestamps: ( timestamp_min, timestamp_max ]
         '''
-        result = self.memes_col.find({MEMES_COL_PUBL_TIMESTAMP: {'$gt': timestamp_min,'$lte': timestamp_max}})
+        result = self.memes_col.find({MEMES_COL_PUBL_TIMESTAMP: {'$gt': timestamp_min,'$lte': timestamp_max},
+                                      MEMES_COL_FEAT_VEC: {"$ne": None}})
         result = result.sort([(MEMES_COL_PUBL_TIMESTAMP, ASCENDING)])
         memes_subset = []
-        for r in result:
-            memes_subset.append(r)
+        for meme in result:
+            memes_subset.append(meme)
 
+        memes_subset = self._validate_memes(memes_subset)
         return memes_subset
 
-    # timestamps
     def _read_most_recent_memes_timestamp_from_db(self, subreddit: str = None) -> int:
         '''
         read timestamp of the most recent scraped meme for a particular subreddit.
@@ -85,37 +149,28 @@ class mmx_server:
         if subreddit:
             filter_dict = {MEMES_COL_SUBREDDIT: subreddit}
 
-        result = self.memes_col.find_one(filter_dict,
+        meme = self.memes_col.find_one(filter_dict,
                                          sort=[(MEMES_COL_PUBL_TIMESTAMP, DESCENDING)])
 
-        if result:
-            timestamp = int(result[MEMES_COL_PUBL_TIMESTAMP])
-        else:
-            timestamp = 0
-
-        return timestamp
-
-    def _read_most_recent_clustering_timestamp_from_db(self) -> int:
-        '''
-        read timestamp of the most recent self.clustering_module snapshot.
-        '''
-        result = self.clusters_col.find_one(sort=[('current_time', DESCENDING)])
-        if result:
-            timestamp = int(result['current_time'])
+        if meme:
+            meme = self._validate_meme(meme)
+            timestamp = meme[MEMES_COL_PUBL_TIMESTAMP]
         else:
             timestamp = 0
 
         return timestamp
 
 
-    # clusters
+    # clustering snapshots
     def _get_init_clustering_snapshot(self) -> Dict:
         init_snapshot_info_dict = {CLUSTERS_COL_SNAPSHOT_TIMESTAMP: 0,
                                    CLUSTERS_COL_SNAPSHOT_NTOTAL: 0,
-                                   CLUSTERS_COL_SNAPSHOT_HASH: hash_string('')}
-        init_denstream_state_dict = denstream_clustering().ds.state_dict()
+                                   CLUSTERS_COL_SNAPSHOT_HASH: hash_string(''),
+                                   CLUSTERS_COL_LABELS : None}
+
+        init_denstream_state_dict = self._clustering_module_func().alg_func.state_dict_compressed()
         init_snapshot = {CLUSTERS_COL_SNAPSHOT: init_snapshot_info_dict,
-                         CLUSTERS_COL_DENSTREAM_STATE_DICT: init_denstream_state_dict}
+                         CLUSTERS_COL_CLUSTERING_STATE_DICT: init_denstream_state_dict}
         return init_snapshot
 
     def _write_clustering_snapshot_to_db(self, clustering_snapshot: Dict) -> bool:
@@ -125,7 +180,7 @@ class mmx_server:
         '''
         if self.verbose: print('_write_clustering_snapshot_to_db')
 
-        clustering_snapshot = self._encode_clustering_snapshot(clustering_snapshot)
+        # clustering_snapshot = self._encode_clustering_snapshot(clustering_snapshot)
 
         try:
             result = self.clusters_col.insert_one(clustering_snapshot)
@@ -134,69 +189,78 @@ class mmx_server:
             if self.verbose: print('error',e)
             return False
 
-    def _compress_denstream_state_dict(self, denstream_state_dict: Dict) -> Dict:
-        for keys in ['o_micro_clusters','p_micro_clusters','completed_o_clusters','completed_p_clusters']:
-            for mc in denstream_state_dict[keys]:
-                del mc['features_array']
-                mc['time_array'] = mc['time_array'].reshape(-1).tolist()
-                mc['labels_array'] = mc['labels_array'].tolist()
-                mc['id_array'] = mc['id_array'].tolist()
-                mc['weight'] = mc['weight'].tolist()
-                mc['center'] = mc['center'].reshape(-1).tolist()
+    def _gen_features_array(self, meme_ids: List[str]) -> np.ndarray:
+        '''
+        generates features_array from meme_ids; used as decompressor_func in self.alg_func.load_state_dict_compressed.
+        '''
+        meme_ids = list(meme_ids)
+        memes = self.memes_col.find({MEMES_COL_ID: {"$in": meme_ids}})
 
-        return denstream_state_dict
+        features_array = []
+        for meme in memes:
+            meme = self._validate_meme(meme)
+            features_array.append(meme[MEMES_COL_FEAT_VEC])
+        features_array = np.array(features_array)
 
-    def _decompress_denstream_state_dict(self, denstream_state_dict: Dict) -> Dict:
+        return features_array
 
-        def gen_features_array(ids: List) -> np.ndarray:
-            lids = list(ids)
-            result = self.memes_col.find({MEMES_COL_ID: {"$in": lids}})
-            features_array = []
-            for r in result:
-                features_array.append(r['feat_vec'])
-            features_array = np.array(features_array)
+    def _is_clustering_snapshot_consistent(self, clustering_snapshot: Dict) -> bool:
 
-            return features_array
+        # first null snapshot is consistent by definition
+        init_clustering_snapshot = self._get_init_clustering_snapshot()
+        if clustering_snapshot == init_clustering_snapshot:
+            return True
 
-        for keys in ['o_micro_clusters','p_micro_clusters','completed_o_clusters','completed_p_clusters']:
-            for mc in denstream_state_dict[keys]:
-                mc['features_array'] = gen_features_array(mc['id_array'])
-                mc['time_array'] = np.array(mc['time_array']).reshape(-1,1)
-                mc['labels_array'] = np.array(mc['labels_array'])
-                mc['id_array'] = np.array(mc['id_array'])
-                mc['weight'] = np.array(mc['weight'])
-                mc['center'] = np.array(mc['center']).reshape(-1,1)
+        snapshot = clustering_snapshot
+        # snapshot_ntotal = snapshot[CLUSTERS_COL_SNAPSHOT][CLUSTERS_COL_SNAPSHOT_NTOTAL]
+        snapshot_hash = snapshot[CLUSTERS_COL_SNAPSHOT][CLUSTERS_COL_SNAPSHOT_HASH]
+        snapshot_timestamp = snapshot[CLUSTERS_COL_SNAPSHOT][CLUSTERS_COL_SNAPSHOT_TIMESTAMP]
 
-        return denstream_state_dict
+        timestamp_field = f'{CLUSTERS_COL_SNAPSHOT}.{CLUSTERS_COL_SNAPSHOT_TIMESTAMP}'
+        sort_criterion = (timestamp_field, DESCENDING)
+        result = self.clusters_col.find_one({timestamp_field : {'$lt': snapshot_timestamp}},sort=[sort_criterion])
 
-    def _encode_clustering_snapshot(self,clustering_snaphot: Dict) -> Dict:
-        clustering_snaphot[CLUSTERS_COL_DENSTREAM_STATE_DICT] = self._compress_denstream_state_dict(clustering_snaphot[CLUSTERS_COL_DENSTREAM_STATE_DICT])
-        return clustering_snaphot
+        if result:
+            prev_snapshot = result
 
-    def _decode_clustering_snapshot(self,clustering_snaphot: Dict) -> Dict:
-        clustering_snaphot[CLUSTERS_COL_DENSTREAM_STATE_DICT] = self._decompress_denstream_state_dict(clustering_snaphot[CLUSTERS_COL_DENSTREAM_STATE_DICT])
-        return clustering_snaphot
+        else:
+            prev_snapshot = init_clustering_snapshot
+
+        # prev_snapshot_ntotal = prev_snapshot[CLUSTERS_COL_SNAPSHOT][CLUSTERS_COL_SNAPSHOT_NTOTAL]
+        prev_snapshot_hash = prev_snapshot[CLUSTERS_COL_SNAPSHOT][CLUSTERS_COL_SNAPSHOT_HASH]
+        prev_snapshot_timestamp = prev_snapshot[CLUSTERS_COL_SNAPSHOT][CLUSTERS_COL_SNAPSHOT_TIMESTAMP]
+
+        memes = self._read_memes_between_timestamps(timestamp_min = prev_snapshot_timestamp, timestamp_max = snapshot_timestamp)
+        string_repr = mmx_server._form_string_repr(memes)
+
+        if snapshot_hash != hash_string(prev_snapshot_hash + string_repr):
+            return False
+
+        return True
 
     def _find_last_consistent_first_inconsistent_clustering_snapshot(self) -> Tuple[Dict, Dict]:
         '''
         go through the snapshots and find the last consistent snapshot and first incosistent snapshot
         '''
-        sort_criterion = (CLUSTERS_COL_SNAPSHOT+'.'+CLUSTERS_COL_SNAPSHOT_TIMESTAMP, ASCENDING)
+        sort_criterion = (f'{CLUSTERS_COL_SNAPSHOT}.{CLUSTERS_COL_SNAPSHOT_TIMESTAMP}', ASCENDING)
         result = self.clusters_col.find({},sort=[sort_criterion])
 
         clustering_snapshots = []
         for r in result:
             clustering_snapshots.append(r)
 
+        # no snapshots in db
         if len(clustering_snapshots) == 0:
             return self._get_init_clustering_snapshot(), None
+
+        clustering_snapshots = [self._get_init_clustering_snapshot()] + clustering_snapshots
 
         prev_snapshot = None
         snapshot = None
         incosistency_found = False
         for ix in range(len(clustering_snapshots)):
             snapshot = clustering_snapshots[ix]
-            snapshot_ntotal = snapshot[CLUSTERS_COL_SNAPSHOT][CLUSTERS_COL_SNAPSHOT_NTOTAL]
+            # snapshot_ntotal = snapshot[CLUSTERS_COL_SNAPSHOT][CLUSTERS_COL_SNAPSHOT_NTOTAL]
             snapshot_hash = snapshot[CLUSTERS_COL_SNAPSHOT][CLUSTERS_COL_SNAPSHOT_HASH]
             snapshot_timestamp = snapshot[CLUSTERS_COL_SNAPSHOT][CLUSTERS_COL_SNAPSHOT_TIMESTAMP]
 
@@ -204,34 +268,31 @@ class mmx_server:
                 continue
             else:
                 prev_snapshot = clustering_snapshots[ix-1]
-                prev_snapshot_ntotal = prev_snapshot[CLUSTERS_COL_SNAPSHOT][CLUSTERS_COL_SNAPSHOT_NTOTAL]
+                # prev_snapshot_ntotal = prev_snapshot[CLUSTERS_COL_SNAPSHOT][CLUSTERS_COL_SNAPSHOT_NTOTAL]
                 prev_snapshot_hash = prev_snapshot[CLUSTERS_COL_SNAPSHOT][CLUSTERS_COL_SNAPSHOT_HASH]
                 prev_snapshot_timestamp = prev_snapshot[CLUSTERS_COL_SNAPSHOT][CLUSTERS_COL_SNAPSHOT_TIMESTAMP]
 
             memes = self._read_memes_between_timestamps(timestamp_min = prev_snapshot_timestamp, timestamp_max = snapshot_timestamp)
-            string_repr = self._form_string_repr(memes)
+            string_repr = mmx_server._form_string_repr(memes)
 
-            if  snapshot_ntotal != prev_snapshot_ntotal + len(memes):
-                if self.verbose: print('CLUSTERS_COL_SNAPSHOT_NTOTAL: inconsistency')
-                incosistency_found = True
-                break
+            # if  snapshot_ntotal != prev_snapshot_ntotal + len(memes):
+            #     if self.verbose: print('CLUSTERS_COL_SNAPSHOT_NTOTAL: inconsistency')
+            #     incosistency_found = True
+            #     break
 
             if snapshot_hash != hash_string(prev_snapshot_hash + string_repr):
-                if self.verbose: print('CLUSTERS_COL_SNAPSHOT_HASH: inconsistency')
+                if self.verbose: print(f'CLUSTERS_COL_SNAPSHOT_HASH: inconsistent hash = {snapshot_hash}')
                 incosistency_found = True
                 break
 
         if incosistency_found:
+            # clustering stack is inconsistent starting from clustering_spahost_fi
             clustering_snapshot_lc = prev_snapshot
             clustering_snapshot_fi = snapshot
         else:
+            # clustering stack is fully consistent with data
             clustering_snapshot_lc = clustering_snapshots[-1]
             clustering_snapshot_fi = None
-
-        if clustering_snapshot_fi:
-            clustering_snapshot_fi = self._decode_clustering_snapshot(clustering_snapshot_fi)
-        if clustering_snapshot_lc:
-            clustering_snapshot_lc = self._decode_clustering_snapshot(clustering_snapshot_lc)
 
         return clustering_snapshot_lc, clustering_snapshot_fi
 
@@ -247,7 +308,39 @@ class mmx_server:
         result = self.clusters_col.delete_many(filter_criterion)
         return result.acknowledged
 
-    def _form_string_repr(self, memes: List) -> str:
+    def _load_clustering_snapshot(self,clustering_snapshot: Dict) -> None:
+        '''
+        Load a clustering snapshot into the self.clustering_module.
+        '''
+        # clustering_snapshot = clustering_snapshot.copy()
+        self.clustering_module.alg_func.load_state_dict_compressed(state_dict_compressed = clustering_snapshot[CLUSTERS_COL_CLUSTERING_STATE_DICT],
+                                                             decompressor_func = self._gen_features_array)
+
+    def _form_next_clustering_snapshot(self, new_data: List[Dict], previous_clustering_snapshot: Dict) -> Dict:
+        '''
+        Form a snapshot from the current state of the self.clustering_module,
+        newly clustered data and the previous snapshot.
+        '''
+        new_timestamp = max([x[MEMES_COL_PUBL_TIMESTAMP] for x in new_data])
+        new_ntotal = previous_clustering_snapshot[CLUSTERS_COL_SNAPSHOT][CLUSTERS_COL_SNAPSHOT_NTOTAL] + len(new_data)
+        hash_base = previous_clustering_snapshot[CLUSTERS_COL_SNAPSHOT][CLUSTERS_COL_SNAPSHOT_HASH]
+        new_string_repr = mmx_server._form_string_repr(new_data)
+        new_hash = hash_string(hash_base + new_string_repr)
+        new_labels = self.clustering_module.fetch_clusters()
+        new_snapshot_info_dict = {CLUSTERS_COL_SNAPSHOT_TIMESTAMP: new_timestamp,
+                                    CLUSTERS_COL_SNAPSHOT_NTOTAL: new_ntotal,
+                                    CLUSTERS_COL_SNAPSHOT_HASH: new_hash,
+                                    CLUSTERS_COL_LABELS: new_labels}
+        new_clustering_state_dict = self.clustering_module.alg_func.state_dict_compressed()
+
+        new_clustering_snapshot = {CLUSTERS_COL_SNAPSHOT: new_snapshot_info_dict,
+                                    CLUSTERS_COL_CLUSTERING_STATE_DICT: new_clustering_state_dict}
+
+        if self.verbose: print(f'new snapshot hash: {new_clustering_snapshot[CLUSTERS_COL_SNAPSHOT][CLUSTERS_COL_SNAPSHOT_HASH]}')
+        return new_clustering_snapshot
+
+    @staticmethod
+    def _form_string_repr(memes: List) -> str:
         '''
         form a string representation of memes dataset.
         To use in incremental hash data stream representation:
@@ -256,94 +349,101 @@ class mmx_server:
         str = ''.join([m[MEMES_COL_ID] for m in memes])
         return str
 
+    def _plot_clustering_snapshots(self) -> None:
+        sort_criterion = (f'{CLUSTERS_COL_SNAPSHOT}.{CLUSTERS_COL_SNAPSHOT_TIMESTAMP}', ASCENDING)
+        result = self.clusters_col.find({},sort=[sort_criterion])
 
-    # main function
-    def exec_meme_scraping_run(self):
+        clustering_snapshots = [self._get_init_clustering_snapshot()]
+        for r in result:
+            clustering_snapshots.append(r)
 
-        print('='*100)
+        for snapshot in clustering_snapshots:
+            timestamp = snapshot[CLUSTERS_COL_SNAPSHOT][CLUSTERS_COL_SNAPSHOT_TIMESTAMP]
+            hash = snapshot[CLUSTERS_COL_SNAPSHOT][CLUSTERS_COL_SNAPSHOT_HASH]
+            ntotal = snapshot[CLUSTERS_COL_SNAPSHOT][CLUSTERS_COL_SNAPSHOT_NTOTAL]
+            is_consistent = {True:'C',False:'I'}[self._is_clustering_snapshot_consistent(snapshot)]
+            print(f'{is_consistent} | {timestamp:13d} | {ntotal:6d} | {hash}')
+
+
+    # main functions
+    def exec_meme_scraping_feat_extract_run(self) -> None:
+
+        if self.verbose: print('='*100)
+
         for subreddit in SUBREDDITS:
 
-            print(f'scraping memes from subreddit = {subreddit}')
+            if self.verbose: print(f'scraping/feature-extraction from subreddit = {subreddit}')
 
             most_recent_memes_timestamp = self._read_most_recent_memes_timestamp_from_db(subreddit = subreddit)
-            print(f'most_recent_memes_timestamp = {most_recent_memes_timestamp}')
+            if self.verbose: print(f'most_recent_memes_timestamp = {most_recent_memes_timestamp}')
+
+            # scraping part
             self.scraping_module.load_subreddit(subreddit = subreddit)
             memes = self.scraping_module.fetch_memes(end_at_timestamp = most_recent_memes_timestamp)
+            memes = self._validate_memes(memes, send_to_db = True)
 
-            ids = memes[MEMES_COL_ID]
-            image_urls = memes[MEMES_COL_IMAGE_URL]
-
-            n_new_memes = len(ids)
-            if self.verbose: print(f'{subreddit}: n_new_memes = {n_new_memes}')
-
-            if n_new_memes > 0:
+            # feature extraction
+            if len(memes) > 0:
                 if self.verbose: print('Extracting features...')
-                features = []
-                for image_url in tqdm(image_urls):
-                    feature = self.feature_extracting_module.get_features_from_url(image_url)
-                    features += [feature]
+                for i in tqdm(range(len(memes))):
+                    feature = self.feature_extracting_module.get_features_from_url(memes[i][MEMES_COL_IMAGE_URL])
+                    memes[i][MEMES_COL_FEAT_VEC] = feature
+                # image_urls = [meme[MEMES_COL_IMAGE_URL] for meme in memes]
+                # features = self.feature_extracting_module.get_features_from_urls(image_urls)
+                # memes[MEMES_COL_FEAT_VEC] = features
 
-                # saving memes + features to db
-                memes[MEMES_COL_FEAT_VEC] = features
                 self._write_memes_to_db(memes = memes)
+            else:
+                if self.verbose: print('No new memes; no feature extraction...')
 
-            print('-'*100)
+            if self.verbose: print('-'*100)
+        if self.verbose: print('='*100)
 
-        print('='*100)
+    def exec_clustering_run(self) -> None:
 
-    def exec_clustering_run(self):
+        if self.verbose: print('='*100)
 
-        print('='*100)
+        if self.verbose: print('START Clustering snapshots:')
+        self._plot_clustering_snapshots()
 
-        # find last consistent and first inconsistent clustering snapshots
-        clustering_snapshot_lc, clustering_snapshot_fi = self._find_last_consistent_first_inconsistent_clustering_snapshot()
+        while True:
+            # find last consistent and first inconsistent clustering snapshots
+            clustering_snapshot_lc, clustering_snapshot_fi = self._find_last_consistent_first_inconsistent_clustering_snapshot()
 
-        # deactivate/remove inconsistent snapshots starting from the first incosistent
-        if clustering_snapshot_fi:
-            success = self._remove_clustering_snapshots(clustering_snapshot_fi = clustering_snapshot_fi)
-            if not success:
-                if self.verbose: print('could not remove incosistent clustering snapshots')
+            # deactivate/remove inconsistent snapshots starting from the first incosistent
+            if clustering_snapshot_fi:
+                print('incosistent snapshot',clustering_snapshot_fi[CLUSTERS_COL_SNAPSHOT][CLUSTERS_COL_SNAPSHOT_HASH])
+                success = self._remove_clustering_snapshots(clustering_snapshot_fi = clustering_snapshot_fi)
+                if not success:
+                    if self.verbose: print('could not remove incosistent clustering snapshots')
 
-        # load the clustering from the last consistent snapshot
-        self.clustering_module.ds.load_state_dict(clustering_snapshot_lc[CLUSTERS_COL_DENSTREAM_STATE_DICT])
+            # load the clustering from the last consistent snapshot
 
-        # load all memes not considered in the last consistent snapshot
-        timestamp_min = clustering_snapshot_lc[CLUSTERS_COL_SNAPSHOT][CLUSTERS_COL_SNAPSHOT_TIMESTAMP]
-        timestamp_max = self._read_most_recent_memes_timestamp_from_db()
-        new_memes = self._read_memes_between_timestamps(timestamp_min = timestamp_min, timestamp_max = timestamp_max)
+            self._load_clustering_snapshot(clustering_snapshot_lc)
 
-        if len(new_memes) > 0:
-            # run clustering
-            if self.verbose: print('Run clustering...')
-            if self.verbose: print(f'clustering new memes: {len(new_memes)}')
+            # load all memes not considered in the last consistent snapshot
+            timestamp_min = clustering_snapshot_lc[CLUSTERS_COL_SNAPSHOT][CLUSTERS_COL_SNAPSHOT_TIMESTAMP]
+            timestamp_max = self._read_most_recent_memes_timestamp_from_db()
+            new_memes = self._read_memes_between_timestamps(timestamp_min = timestamp_min, timestamp_max = timestamp_max)
 
-            for new_m in new_memes:
-                if isinstance(new_m[MEMES_COL_FEAT_VEC],list):
-                    feature = np.array(new_m[MEMES_COL_FEAT_VEC])
-                    meme_id = new_m[MEMES_COL_ID]
-                    publ_timestamp = int(new_m[MEMES_COL_PUBL_TIMESTAMP])
+            if CLUSTERING_BATCH_SIZE:
+                new_memes = new_memes[:CLUSTERING_BATCH_SIZE]
 
-                    self.clustering_module.cluster_data(data = feature,
-                                                        data_id = meme_id,
-                                                        timestamp = publ_timestamp)
+            if len(new_memes) > 0:
+                # run clustering
+                if self.verbose: print('Run clustering...')
+                self.clustering_module.append_data(new_memes)
 
-            # save the results as a snapshot
-            new_timestamp = timestamp_max
-            new_ntotal = len(new_memes)
-            hash_base = clustering_snapshot_lc[CLUSTERS_COL_SNAPSHOT][CLUSTERS_COL_SNAPSHOT_HASH]
-            new_string_repr = self._form_string_repr(new_memes)
-            new_hash = hash_string(hash_base + new_string_repr)
-            new_snapshot_info_dict = {CLUSTERS_COL_SNAPSHOT_TIMESTAMP: new_timestamp,
-                                      CLUSTERS_COL_SNAPSHOT_NTOTAL: new_ntotal,
-                                      CLUSTERS_COL_SNAPSHOT_HASH: new_hash}
-            new_denstream_state_dict = self.clustering_module.ds.state_dict()
+                # save the results as a snapshot
+                new_clustering_snapshot = self._form_next_clustering_snapshot(new_data = new_memes,
+                                                                            previous_clustering_snapshot = clustering_snapshot_lc)
+                self._write_clustering_snapshot_to_db(clustering_snapshot = new_clustering_snapshot)
 
-            new_clustering_snapshot = {CLUSTERS_COL_SNAPSHOT: new_snapshot_info_dict,
-                                       CLUSTERS_COL_DENSTREAM_STATE_DICT: new_denstream_state_dict}
+            else:
+                if self.verbose: print('No new data; no need to run clustering')
+                break
 
-            self._write_clustering_snapshot_to_db(clustering_snapshot = new_clustering_snapshot)
+        if self.verbose: print('FINISH Clustering snapshots:')
+        self._plot_clustering_snapshots()
 
-        else:
-            if self.verbose: print('No new data; no need to run clustering')
-
-        print('='*100)
+        if self.verbose: print('='*100)
