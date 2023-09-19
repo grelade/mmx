@@ -2,5 +2,10 @@
 *.ipynb
 bin/__pycache__
 __pycache__
+<<<<<<< HEAD
 .vscode/
 .venv/
+=======
+old-stuff
+.vscode/
+>>>>>>> abc782df65035070eb299a34e5b2f1b94583ecff
