@@ -4,9 +4,6 @@ from pymongo.errors import ConnectionFailure
 from mmx.const import *
 from mmx.utils import is_mmx_configured
 
-if not is_mmx_configured():
-    exit()
-
 def test_mongodb_connection(mongodb_url):
     try:
         mongodb = MongoClient(mongodb_url)
