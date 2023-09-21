@@ -1,15 +1,20 @@
 from pymongo import DESCENDING as desc, ASCENDING as asc
 
 # core.mmx_server consts
-MONGODB_URL = ''
+# MONGODB_URL = 'mongodb://localhost:27017'
+# MONGODB_URL = ''
+MONGODB_URL = 'mongodb://mongo:27017'
 DESCENDING = desc
 ASCENDING = asc
 MAIN_DB = 'mmx'
 MEMES_COLLECTION = 'memes'
 CLUSTERS_COLLECTION = 'clusters'
-FEAT_EXTRACT_MODEL = 'resnet18'
-# CLUSTERING_MODEL = 'denstream'
+
+FEAT_EXTRACT_MODEL = 'resnet18' # 512 features
+# FEAT_EXTRACT_MODEL = 'resnet50' # 2048 features
+# FEAT_EXTRACT_MODEL = 'mobilenet' # 960 features
 CLUSTERING_MODEL = 'hcluster'
+# CLUSTERING_MODEL = 'denstream'
 
 # clustering parameters
 # CLUSTERING_BATCH_SIZE = None

@@ -25,6 +25,6 @@ def fetch_memes():
     return 'jiojio'
 
 if __name__ == '__main__':
-    app.run(debug = True, port = 8001)
+    app.run(debug = False, host='0.0.0.0', port = 8000)
 
 
