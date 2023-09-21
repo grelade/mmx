@@ -17,14 +17,22 @@ services:
       - mongo
     networks:
     - node-network
-    command: sh -c "python server_api.py"
-
+    volumes:
+      - type: bind
+        source: ./
+        target: /mmx_app/
+    # command: sh -c "python server_api.py"
+    command: sh -c "watchmedo auto-restart -p \"*.py\" python server_api.py"
   scraper:
     build: .
     depends_on:
       - mongo
     networks:
     - node-network
+    volumes:
+      - type: bind
+        source: ./
+        target: /mmx_app/
     command: sh -c "python server_scrape.py"
 
   cluster:
@@ -33,6 +41,11 @@ services:
       - mongo
     networks:
     - node-network
+    volumes:
+      - type: bind
+        source: ./
+        target: /mmx_app/
+
     command: sh -c "python server_cluster.py"
 
   mongo:
@@ -40,12 +53,16 @@ services:
     ports:
      - 27018:27017
     volumes:
-      - dbdata:/data/db
+      - type: volume
+        source: dbdata
+        target: /data/db
     networks:
       - node-network
 
 volumes:
   dbdata:
+
+
 
 # The commented out section below is an example of how to define a PostgreSQL
 # database that your application can use. `depends_on` tells Docker Compose to

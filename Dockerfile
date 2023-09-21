@@ -40,7 +40,6 @@ RUN --mount=type=cache,target=/home/grela/.cache/pip \
     python -m pip install -r requirements.txt --extra-index-url https://download.pytorch.org/whl/cpu
 
 #numba tmp directory hack
-# RUN mkdir /tmp/numba_cache & chmod 777 /tmp/numba_cache & NUMBA_CACHE_DIR=/tmp/numba_cache
 
 # Switch to the non-privileged user to run the application.
 
@@ -50,7 +49,7 @@ ENV TORCH_HOME=/tmp/torch_cache
 
 
 # Copy the source code into the container.
-COPY . .
+# COPY . .
 
 # Expose the port that the application listens on.
 # EXPOSE 8000

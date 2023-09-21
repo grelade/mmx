@@ -22,7 +22,7 @@ def fetch_clusters():
 
 @app.route("/api/memes")
 def fetch_memes():
-    return 'jiojio'
+    return 'jiojiookk'
 
 if __name__ == '__main__':
     app.run(debug = False, host='0.0.0.0', port = 8000)
