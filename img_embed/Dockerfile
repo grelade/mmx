@@ -37,6 +37,10 @@ RUN --mount=type=cache,target=/home/grela/.cache/pip \
     --mount=type=bind,source=requirements.txt,target=requirements.txt \
     python -m pip install -r requirements.txt
 
+RUN apt-get update
+RUN apt install libgl1-mesa-glx -y
+RUN  apt install libglib2.0-0 -y
+# RUN apt-get install ffmpeg libsm6 libxext6 -y
 #numba tmp directory hack
 
 # Switch to the non-privileged user to run the application.
@@ -45,11 +49,11 @@ RUN --mount=type=cache,target=/home/grela/.cache/pip \
 
 
 # Copy the source code into the container.
-# COPY . .
+COPY . .
 
 # Expose the port that the application listens on.
-# EXPOSE 8000
+EXPOSE 8001
 
 # Run the application.
-# CMD python server_api.py
+CMD python server_embedding.py
 # CMD gunicorn 'server_api:app' --bind=0.0.0.0:8000
