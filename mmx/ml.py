@@ -3,23 +3,35 @@ from typing import Union, List, Dict
 from tqdm import tqdm
 import scipy.cluster.hierarchy
 
-import torch
-import torch.nn as nn
-from torchvision.io import read_image, ImageReadMode
-from torchvision.models.quantization import resnet50, ResNet50_QuantizedWeights
-from torchvision.models.quantization import mobilenet_v3_large, MobileNet_V3_Large_QuantizedWeights
-from torchvision.models.quantization import resnet18, ResNet18_QuantizedWeights
+import requests
+import json
+from PIL import Image
+
+# import torch
+# import torch.nn as nn
+# from torchvision.io import read_image, ImageReadMode
+# from torchvision.models.quantization import resnet50, ResNet50_QuantizedWeights
+# from torchvision.models.quantization import mobilenet_v3_large, MobileNet_V3_Large_QuantizedWeights
+# from torchvision.models.quantization import resnet18, ResNet18_QuantizedWeights
 
 from .denstream import DenStream
 from .utils import download_url
 from .const import *
 
-class identity(nn.Module):
-    def __init__(self):
-        super().__init__()
+def huggingface_model(image_array):
+    # FEAT_EXTRACT_HUGGINGFACE_API
+    data = json.dumps(image_array)
+    url = "https://api-inference.huggingface.co/models/SiddharthaM/resnet-18-feature-extraction"
+    headers = {"Authorization": f"Bearer {FEAT_EXTRACT_HUGGINGFACE_API}"}
+    response = requests.request("POST", url, headers=headers, data=data)
+    return json.loads(response.content.decode("utf-8"))
 
-    def forward(self, x):
-        return x
+# class identity(nn.Module):
+#     def __init__(self):
+#         super().__init__()
+
+#     def forward(self, x):
+#         return x
 
 class feat_extract:
     '''
@@ -29,70 +41,79 @@ class feat_extract:
                  model: str = 'resnet50',
                  verbose: bool = False) -> None:
 
-        self.embedding_model, self.preprocess_model = feat_extract._get_model(model)
+        self.embedding_model = feat_extract._get_model(model)
         self.verbose = verbose
 
     @staticmethod
     def _get_model(model: str):
         if model == 'resnet50':
             # 2048 features
-            weights = ResNet50_QuantizedWeights.DEFAULT
-            preprocess = weights.transforms()
-            model = resnet50(weights=weights, quantize=True)
-            model.fc = identity()
-            model.eval()
-            return model, preprocess
+            # weights = ResNet50_QuantizedWeights.DEFAULT
+            # preprocess = weights.transforms()
+            # model = resnet50(weights=weights, quantize=True)
+            # model.fc = identity()
+            # model.eval()
+            # return model, preprocess
+            return None
 
         elif model == 'resnet18':
             # 512 features
-            weights = ResNet18_QuantizedWeights.DEFAULT
-            preprocess = weights.transforms()
-            model = resnet18(weights=weights, quantize=True)
-            model.fc = identity()
-            model.eval()
-            return model, preprocess
+            # weights = ResNet18_QuantizedWeights.DEFAULT
+            # preprocess = weights.transforms()
+            # model = resnet18(weights=weights, quantize=True)
+            # model.fc = identity()
+            # model.eval()
+            model = huggingface_model
+            return model
 
-        elif model == 'mobilenet':
-            # 960 features
-            weights = MobileNet_V3_Large_QuantizedWeights.DEFAULT
-            preprocess = weights.transforms()
-            model = mobilenet_v3_large(weights=weights, quantize=True)
-            model.classifier = identity()
-            model.eval()
-            return model, preprocess
+        # elif model == 'mobilenet':
+        #     # 960 features
+        #     weights = MobileNet_V3_Large_QuantizedWeights.DEFAULT
+        #     preprocess = weights.transforms()
+        #     model = mobilenet_v3_large(weights=weights, quantize=True)
+        #     model.classifier = identity()
+        #     model.eval()
+        #     return model, preprocess
 
         else:
             if self.verbose: print(f'unknown model = {model}')
             return None, None
 
     @staticmethod
-    def image_url_to_tensor(image_url: str) -> Union[torch.Tensor,None]:
+    def image_url_to_array(image_url: str) -> Union[np.ndarray,None]:
 
         temp_path = download_url(image_url = image_url)
         img = None
         try:
             if temp_path:
-                img = read_image(temp_path, mode = ImageReadMode.RGB)
+                img = Image.open(temp_path)
+                img = np.array(img)
 
         except RuntimeError as e:
             print(f'read_image({image_url}) error: {e}')
 
         return img
 
-    def get_features(self, image_tensor: torch.Tensor) -> Union[np.ndarray,None]:
-        # output = 2*np.random.rand() - 1 + 0.1*np.array([random.random() for _ in range(128)])
-        # output = output.astype(np.float32)
+    def get_features(self,image_array: np.ndarray) -> Union[np.ndarray,None]:
         output = None
-        if isinstance(image_tensor,torch.Tensor):
-            batch = self.preprocess_model(image_tensor).unsqueeze(0)
-            output = self.embedding_model(batch).squeeze().numpy()
-
+        if isinstance(image_array,np.ndarray):
+            output = self.embedding_model(image_array)
         return output
 
+    # def get_features(self, image_tensor: torch.Tensor) -> Union[np.ndarray,None]:
+    #     # output = 2*np.random.rand() - 1 + 0.1*np.array([random.random() for _ in range(128)])
+    #     # output = output.astype(np.float32)
+    #     output = None
+    #     if isinstance(image_tensor,torch.Tensor):
+    #         batch = self.preprocess_model(image_tensor).unsqueeze(0)
+    #         output = self.embedding_model(batch).squeeze().numpy()
+
+    #     return output
+
     def get_features_from_url(self, image_url: str) -> Union[np.ndarray,None]:
-        image_tensor = feat_extract.image_url_to_tensor(image_url)
+        image_array = feat_extract.image_url_to_array(image_url)
         # print(image_url, image_tensor.shape)
-        feat = self.get_features(image_tensor)
+        feat = self.get_features(image_array)
         return feat
 
     def get_features_from_urls(self,image_urls: List[str]) -> List[np.ndarray]:

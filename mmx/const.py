@@ -10,6 +10,7 @@ MAIN_DB = 'mmx'
 MEMES_COLLECTION = 'memes'
 CLUSTERS_COLLECTION = 'clusters'
 
+FEAT_EXTRACT_HUGGINGFACE_API = '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'
 FEAT_EXTRACT_MODEL = 'resnet18' # 512 features
 # FEAT_EXTRACT_MODEL = 'resnet50' # 2048 features
 # FEAT_EXTRACT_MODEL = 'mobilenet' # 960 features
