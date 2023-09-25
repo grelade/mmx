@@ -15,8 +15,9 @@ app = Flask(__name__)
 def info():
     info = 'mmx API server<br>'
     info += 'endpoints:<br>'
-    info += f'<b>{API_V1_BASE_URL}/memes/</b> - fetch all memes (paginated)<br>'
-    info += f'<b>{API_V1_BASE_URL}/memes/?sort=asc</b> - fetch all memes (paginated), sorted by publ_timestamp<br>'
+    info += f'<b>{API_V1_BASE_URL}/memes/</b> - fetch all memes (paginated), sorted in descedning order by publ_timestamp<br>'
+    info += f'<b>{API_V1_BASE_URL}/memes/?by=(publ_ts,upvotes,comments)</b> - fetch all memes (paginated), sorted by publ_timestamp, num of upvotes or num of comments<br>'
+    info += f'<b>{API_V1_BASE_URL}/memes/?sort=(asc,desc)</b> - fetch all memes (paginated), ascending, descending order<br>'
     info += f'<b>{API_V1_BASE_URL}/memes/[meme_id]</b> - fetch a single meme with [meme_id]<br>'
     info += f'<b>{API_V1_BASE_URL}/clusters/</b> - fetch newest clusters<br>'
     info += f'[NOT WORKING] <b>{API_V1_BASE_URL}/clusters/?detailed=1</b> - fetch newest clusters, detailed version<br>'
@@ -27,11 +28,22 @@ def info():
 def fetch_all_memes():
     page = request.args.get('page',default = 1, type = int)
     id_sort = request.args.get('sort',default='desc',type = str)
+    by = request.args.get('by',default='publ_ts',type = str)
+
+    if by == 'publ_ts':
+        sort_field = MEMES_COL_PUBL_TIMESTAMP
+    if by == 'upvotes':
+        sort_field = MEMES_COL_UPVOTES
+    elif by == 'comments':
+        sort_field = MEMES_COL_COMMENTS
+    else:
+        sort_field = MEMES_COL_PUBL_TIMESTAMP
+
     id_sort_mongo = {'asc' : ASCENDING,
                      'desc' : DESCENDING }[id_sort]
 
     memes_count = server.memes_col.count_documents({})
-    memes = list(server.memes_col.find({},{MEMES_COL_FEAT_VEC:0}).sort(MEMES_COL_PUBL_TIMESTAMP, id_sort_mongo).skip(API_PAGE_LIMIT * (page - 1)).limit(API_PAGE_LIMIT))
+    memes = list(server.memes_col.find({},{MEMES_COL_FEAT_VEC:0}).sort(sort_field, id_sort_mongo).skip(API_PAGE_LIMIT * (page - 1)).limit(API_PAGE_LIMIT))
 
     if page*API_PAGE_LIMIT < memes_count:
         next_url = f"{API_V1_BASE_URL}/memes/?page={page+1}&sort={id_sort}"
@@ -98,6 +110,6 @@ def fetch_last_clusters():
 #
 
 if __name__ == '__main__':
-    app.run(debug = False, host='0.0.0.0', port = 8000)
+    app.run(debug = False, host='0.0.0.0', port = 8002)
 
 

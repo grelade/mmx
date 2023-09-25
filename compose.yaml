@@ -3,9 +3,9 @@ services:
   api:
     build: ./dockers/api
     ports:
-      - 20410:8000
-    depends_on:
-      - mongo
+      - 20410:8002
+    # depends_on:
+    #   - mongo
     networks:
     - node-network
     volumes:
@@ -15,6 +15,8 @@ services:
       - type: bind
         source: ./mmx
         target: /mmx_app/mmx
+    secrets:
+      - mongodb_url
 
     # command: sh -c "python server.py"
     command: sh -c "watchmedo auto-restart -p \"*.py\" python server.py"
@@ -23,7 +25,7 @@ services:
   scrape:
     build: ./dockers/scrape
     depends_on:
-      - mongo
+      # - mongo
       - embed
     networks:
     - node-network
@@ -34,14 +36,16 @@ services:
       - type: bind
         source: ./mmx/
         target: /mmx_app/mmx/
+    secrets:
+      - mongodb_url
 
-    command: sh -c "python server.py"
-
+    # command: sh -c "python server.py"
+    command: sh -c "watchmedo auto-restart -p \"*.py\" python server.py"
 
   cluster:
     build: ./dockers/cluster
-    depends_on:
-      - mongo
+    # depends_on:
+    #   - mongo
     networks:
     - node-network
     volumes:
@@ -51,9 +55,11 @@ services:
       - type: bind
         source: ./mmx/
         target: /mmx_app/mmx/
+    secrets:
+      - mongodb_url
 
-    command: sh -c "python server.py"
-
+    # command: sh -c "python server.py"
+    command: sh -c "watchmedo auto-restart -p \"*.py\" python server.py"
 
   embed:
     build: ./dockers/embed
@@ -68,21 +74,23 @@ services:
       - type: bind
         source: ./mmx/
         target: /mmx_app/mmx/
+    secrets:
+      - mongodb_url
 
     # command: sh -c "python server.py"
     command: sh -c "watchmedo auto-restart -p \"*.py\" python server.py"
 
 
-  mongo:
-    image: 'mongo:latest'
-    ports:
-     - 30410:27017
-    volumes:
-      - type: volume
-        source: dbdata
-        target: /data/db
-    networks:
-      - node-network
+  # mongo:
+  #   image: 'mongo:latest'
+  #   ports:
+  #    - 30410:27017
+  #   volumes:
+  #     - type: volume
+  #       source: dbdata
+  #       target: /data/db
+  #   networks:
+  #     - node-network
 
 volumes:
   dbdata:
@@ -90,3 +98,8 @@ volumes:
 networks:
   node-network:
     driver: bridge
+
+secrets:
+  mongodb_url:
+    file : ./mongodb_url
+

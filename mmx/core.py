@@ -1,6 +1,7 @@
 import numpy as np
 from tqdm import tqdm
 from pymongo import MongoClient
+from pymongo.server_api import ServerApi
 from pymongo.errors import BulkWriteError
 from typing import Union, Dict, List, Tuple
 
@@ -22,7 +23,11 @@ class mmx_server:
             self._clustering_module_func = hcluster_clustering
         self.clustering_module = self._clustering_module_func(verbose = verbose)
 
-        self.mongodb = MongoClient(MONGODB_URL)
+        if 'mongodb+srv' in MONGODB_URL:
+            self.mongodb = MongoClient(MONGODB_URL, server_api=ServerApi('1'))
+        else:
+            self.mongodb = MongoClient(MONGODB_URL)
+
         self.memes_col = self.mongodb[MAIN_DB][MEMES_COLLECTION]
         self.clusters_col = self.mongodb[MAIN_DB][CLUSTERS_COLLECTION]
 

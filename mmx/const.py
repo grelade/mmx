@@ -1,5 +1,13 @@
+import os
+
+
+
 # mongo server
-MONGODB_URL = 'mongodb://mongo:27017'
+MONGODB_URL_PATH = '/run/secrets/mongodb_url'
+if os.path.exists(MONGODB_URL_PATH):
+    with open(MONGODB_URL_PATH) as f: MONGODB_URL = f.readline().strip('\n')
+else:
+    MONGODB_URL = 'mongodb://mongo:27017'
 DESCENDING = -1 # pymongo consts
 ASCENDING = 1 # pymongo consts
 MAIN_DB = 'mmx'
@@ -23,7 +31,6 @@ CLUSTERS_COL_SNAPSHOT_NTOTAL = 'data_total'
 CLUSTERS_COL_SNAPSHOT_HASH = 'data_hash'
 CLUSTERS_COL_CLUSTERED_IDS = 'data_clustered_ids'
 CLUSTERS_COL_CLUSTERING_STATE_DICT = 'state_dict'
-
 CLUSTERS_COL_SNAPSHOT_CLUSTERS_INFO = 'data_clusters_info'
 
 
@@ -55,7 +62,7 @@ DENSTREAM_MU = 2
 DENSTREAM_LAMBDA = 1e-12
 
 # hcluster_clustering algorithm parameters
-HCLUSTER_THRESHOLD = 3.0
+HCLUSTER_THRESHOLD = 6.4
 
 
 
