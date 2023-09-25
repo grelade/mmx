@@ -40,7 +40,7 @@ class embedder:
             output = embedding_result.embeddings[0].embedding.tolist()
 
         except UnidentifiedImageError as e:
-            print('UnidentifiedImageError: embedding fail {e}')
+            print(f'UnidentifiedImageError: embedding fail {e}')
 
         return output
 
