@@ -55,9 +55,10 @@ def fetch_meme(meme_id: str):
 @app.route(f"{API_V1_BASE_URL}/clusters/",methods=["GET"])
 def fetch_last_clusters():
     detailed = request.args.get('detailed',default = 0, type = int)
-    detailed_bool = bool(detailed)
-    out = server.clusters_col.find_one(filter={},
-                                       projection={CLUSTERS_COL_CLUSTERING_STATE_DICT:0},
+    # projection = {CLUSTERS_COL_CLUSTERING_STATE_DICT:0}
+    projection = {}
+    out = server.clusters_col.find_one(filter = {},
+                                       projection = projection,
                                        sort=[(f'{CLUSTERS_COL_SNAPSHOT}.{CLUSTERS_COL_SNAPSHOT_TIMESTAMP}',DESCENDING)])
 
     #filter out singlets:
