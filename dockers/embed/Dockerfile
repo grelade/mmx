@@ -14,7 +14,7 @@ ENV PYTHONDONTWRITEBYTECODE=1
 # the application crashes without emitting any logs due to buffering.
 ENV PYTHONUNBUFFERED=1
 
-WORKDIR /img_embed_app
+WORKDIR /mmx_app
 
 # Create a non-privileged user that the app will run under.
 # See https://docs.docker.com/develop/develop-images/dockerfile_best-practices/#user
@@ -55,5 +55,5 @@ COPY . .
 EXPOSE 8001
 
 # Run the application.
-CMD python server_embedding.py
+CMD python server.py
 # CMD gunicorn 'server_api:app' --bind=0.0.0.0:8000

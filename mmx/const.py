@@ -1,19 +1,19 @@
-from pymongo import DESCENDING as desc, ASCENDING as asc
-
 # core.mmx_server consts
 # MONGODB_URL = 'mongodb://localhost:27017'
 # MONGODB_URL = ''
 MONGODB_URL = 'mongodb://mongo:27017'
-DESCENDING = desc
-ASCENDING = asc
+DESCENDING = -1
+ASCENDING = 1
 MAIN_DB = 'mmx'
 MEMES_COLLECTION = 'memes'
 CLUSTERS_COLLECTION = 'clusters'
 
-FEAT_EXTRACT_HUGGINGFACE_API = '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'
-FEAT_EXTRACT_MODEL = 'resnet18' # 512 features
+FEAT_EXTRACT_API_URL = 'http://embed:8001/embedding'
+# FEAT_EXTRACT_MODEL = 'resnet18' # 512 features
 # FEAT_EXTRACT_MODEL = 'resnet50' # 2048 features
 # FEAT_EXTRACT_MODEL = 'mobilenet' # 960 features
+EMBEDDING_MODEL_PATH = 'mmx/embed_model/mobilenet_v3_small_075_224_embedder.tflite'
+
 CLUSTERING_MODEL = 'hcluster'
 # CLUSTERING_MODEL = 'denstream'
 

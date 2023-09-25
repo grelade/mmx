@@ -5,7 +5,7 @@ cffi==1.15.1
 click==8.1.7
 contourpy==1.1.1
 cycler==0.11.0
-flask==2.3.3
+Flask==2.3.3
 flatbuffers==23.5.26
 fonttools==4.42.1
 importlib-metadata==6.8.0
@@ -26,5 +26,6 @@ pyparsing==3.1.1
 python-dateutil==2.8.2
 six==1.16.0
 sounddevice==0.4.6
-werkzeug==2.3.7
+watchdog==3.0.0
+Werkzeug==2.3.7
 zipp==3.17.0

@@ -1,5 +1,7 @@
 import requests
 
+from mmx.const import *
+
 filename = 'test.jpg'
 
 with open(filename, "rb") as f:

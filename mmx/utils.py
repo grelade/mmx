@@ -8,13 +8,6 @@ import json
 
 from .const import *
 
-def is_mmx_configured():
-    if MONGODB_URL == '':
-        print('mmx not setup properly: no mongodb server given')
-        print('MONGODB_URL in mmx/const.py should contain the server')
-        return False
-    return True
-
 def hash_string(input_string):
     # Create a new SHA-256 hash object
     sha256_hash = hashlib.sha256()

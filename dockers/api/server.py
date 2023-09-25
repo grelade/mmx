@@ -1,4 +1,6 @@
 from flask import Flask, request, send_file
+import sys
+sys.path.append('./')
 
 from mmx.api import mmx_api
 from mmx.const import *
@@ -8,6 +10,10 @@ server = mmx_api(verbose = True)
 
 app = Flask(__name__)
 # app.debug = True
+
+@app.route("/")
+def info():
+    return 'API server'
 
 @app.route("/api/clusters")
 def fetch_clusters():

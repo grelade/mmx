@@ -14,7 +14,7 @@ class mmx_server:
     def __init__(self, verbose: bool = False):
 
         self.scraping_module = scraper_reddit(verbose = verbose)
-        self.feature_extracting_module = feat_extract(model = FEAT_EXTRACT_MODEL, verbose = verbose)
+        self.feature_extracting_module = feat_extract(verbose = verbose)
 
         if CLUSTERING_MODEL == 'denstream':
             self._clustering_module_func = denstream_clustering
