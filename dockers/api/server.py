@@ -19,7 +19,7 @@ def info():
     info += f'<b>{API_V1_BASE_URL}/memes/?sort=asc</b> - fetch all memes (paginated), sorted by publ_timestamp<br>'
     info += f'<b>{API_V1_BASE_URL}/memes/[meme_id]</b> - fetch a single meme with [meme_id]<br>'
     info += f'<b>{API_V1_BASE_URL}/clusters/</b> - fetch newest clusters<br>'
-    info += f'<b>{API_V1_BASE_URL}/clusters/?detailed=1</b> - fetch newest clusters, detailed version<br>'
+    info += f'[NOT WORKING] <b>{API_V1_BASE_URL}/clusters/?detailed=1</b> - fetch newest clusters, detailed version<br>'
     return info
 
 # fetch all memes (paginated)
@@ -61,10 +61,13 @@ def fetch_last_clusters():
                                        sort=[(f'{CLUSTERS_COL_SNAPSHOT}.{CLUSTERS_COL_SNAPSHOT_TIMESTAMP}',DESCENDING)])
 
     #filter out singlets:
+    if out is None:
+        return {}
+
     out[CLUSTERS_COL_SNAPSHOT][CLUSTERS_COL_CLUSTERED_IDS] = list(filter(lambda x: len(x)>1,out[CLUSTERS_COL_SNAPSHOT][CLUSTERS_COL_CLUSTERED_IDS]))
 
     if detailed:
-        return ''
+        return {}
     else:
         out[CLUSTERS_COL_SNAPSHOT_CLUSTERS_INFO] = [{'meme_ids': x} for x in out[CLUSTERS_COL_SNAPSHOT][CLUSTERS_COL_CLUSTERED_IDS]]
         del out[CLUSTERS_COL_SNAPSHOT][CLUSTERS_COL_CLUSTERED_IDS]
