@@ -21,9 +21,13 @@ CLUSTERS_COL_SNAPSHOT = 'snapshot'
 CLUSTERS_COL_SNAPSHOT_TIMESTAMP = 'timestamp'
 CLUSTERS_COL_SNAPSHOT_NTOTAL = 'data_total'
 CLUSTERS_COL_SNAPSHOT_HASH = 'data_hash'
-CLUSTERS_COL_CLUSTERED_IDS = 'data_clustered_ids'
+CLUSTERS_COL_INFO = 'clusters_info'
+CLUSTERS_COL_INFO_IDS = 'meme_ids'
+CLUSTERS_COL_INFO_EXAMPLE_IMAGE = 'example_image_url'
+CLUSTERS_COL_INFO_NMEMES = 'num_memes'
+CLUSTERS_COL_INFO_TOTAL_COMMENTS = 'total_comments'
+CLUSTERS_COL_INFO_TOTAL_UPVOTES = 'total_upvotes'
 CLUSTERS_COL_CLUSTERING_STATE_DICT = 'state_dict'
-CLUSTERS_COL_SNAPSHOT_CLUSTERS_INFO = 'data_clusters_info'
 
 
 # api server
@@ -40,6 +44,7 @@ EMBEDDING_MODEL_PATH = 'mmx/embed_model/mobilenet_v3_small_075_224_embedder.tfli
 # cluster server
 CLUSTERING_MODEL = 'hcluster'
 # CLUSTERING_MODEL = 'denstream'
+CLUSTERING_MIN_CLUSTER_SIZE = 3
 
 # denstream_clustering algorithm parameters
 DENSTREAM_EPS = 12

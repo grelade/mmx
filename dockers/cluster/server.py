@@ -5,7 +5,7 @@ import argparse
 
 import sys
 sys.path.append('./')
-from mmx.core import mmx_server_scrape_embed_cluster
+from mmx.servers_comp import mmx_server_cluster
 
 parser = argparse.ArgumentParser(description='mmx cluster server')
 
@@ -30,8 +30,9 @@ mongodb_url = args.mongodb_url
 run_mode = args.run_mode
 job_interval = args.job_interval
 batch_size = args.batch_size
+batch_size = None if batch_size==-1 else batch_size
 
-server = mmx_server_scrape_embed_cluster(mongodb_url = mongodb_url, verbose = True)
+server = mmx_server_cluster(mongodb_url = mongodb_url, verbose = True)
 if not server.is_mongodb_active():
     print('Could not connect to mongo; exiting')
     exit()
@@ -39,7 +40,7 @@ if not server.is_mongodb_active():
 def cluster_job():
     print('='*100)
     print('#'*25 + f' CLUSTER job start ' + '#'*25)
-    server.exec_clustering_run()
+    server.exec_clustering_run(clustering_batch_size = batch_size)
 
 print('running CLUSTER server')
 print(f'run_mode = {run_mode}')

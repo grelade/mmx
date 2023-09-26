@@ -8,7 +8,7 @@ with open(filename, "rb") as f:
     data = f.read()
 
 headers = {}
-response = requests.post('http://localhost:8001/embedding',
+response = requests.post(FEAT_EXTRACT_API_URL,
                          headers=headers,
                          files={'file':data})
 

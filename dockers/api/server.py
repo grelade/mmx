@@ -3,7 +3,7 @@ import argparse
 
 import sys
 sys.path.append('./')
-from mmx.api import mmx_server_api
+from mmx.servers_api import mmx_server_api
 from mmx.const import *
 from mmx.utils import parse_json
 
@@ -90,38 +90,20 @@ def fetch_last_clusters():
     #filter out singlets:
     if out is None:
         return {}
-
-    out[CLUSTERS_COL_SNAPSHOT][CLUSTERS_COL_CLUSTERED_IDS] = list(filter(lambda x: len(x)>1,out[CLUSTERS_COL_SNAPSHOT][CLUSTERS_COL_CLUSTERED_IDS]))
-
-    if detailed:
-        return {}
     else:
-        out[CLUSTERS_COL_SNAPSHOT_CLUSTERS_INFO] = [{'meme_ids': x} for x in out[CLUSTERS_COL_SNAPSHOT][CLUSTERS_COL_CLUSTERED_IDS]]
-        del out[CLUSTERS_COL_SNAPSHOT][CLUSTERS_COL_CLUSTERED_IDS]
-
-        n_clusters = len(out[CLUSTERS_COL_SNAPSHOT_CLUSTERS_INFO])
-        for i in range(n_clusters):
-            cluster_info = out[CLUSTERS_COL_SNAPSHOT_CLUSTERS_INFO][i]
-            meme_ids = cluster_info['meme_ids']
-            output = server.memes_col.find(filter = {MEMES_COL_ID: {'$in':meme_ids}})
-            memes = []
-            for meme in output:
-                memes.append(meme)
-
-            image_urls = [meme[MEMES_COL_IMAGE_URL] for meme in memes if meme[MEMES_COL_FEAT_VEC]]
-            example_image_url = None
-            if len(image_urls)>0:
-                example_image_url = image_urls[0]
-
-            cluster_info['example_image_url'] = image_urls
-            cluster_info['total_upvotes'] = sum([meme[MEMES_COL_UPVOTES] for meme in memes])
-            cluster_info['total_comments'] = sum([meme[MEMES_COL_COMMENTS] for meme in memes])
-            cluster_info['num_memes'] = len(memes)
-
-
-        return parse_json(out)
+        if detailed:
+            return {}
+        else:
+            return parse_json(out)
 
 #
+@app.route(f"{API_V1_BASE_URL}/clusters_raw/",methods=["GET"])
+def fetch_last_clusters_raw():
+    projection = {}
+    out = server.clusters_col.find_one(filter = {},
+                                       projection = projection,
+                                       sort=[(f'{CLUSTERS_COL_SNAPSHOT}.{CLUSTERS_COL_SNAPSHOT_TIMESTAMP}',DESCENDING)])
+    return parse_json(out)
 
 if __name__ == '__main__':
     app.run(debug = False, host='0.0.0.0', port = 8002)
