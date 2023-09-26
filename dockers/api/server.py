@@ -1,12 +1,26 @@
 from flask import Flask, request, send_file
+import argparse
+
 import sys
 sys.path.append('./')
-
-from mmx.api import mmx_api
+from mmx.api import mmx_server_api
 from mmx.const import *
 from mmx.utils import parse_json
 
-server = mmx_api(verbose = True)
+parser = argparse.ArgumentParser(description='mmx api server')
+
+parser.add_argument('-m', '--mongodb_url', type=str, required=True,
+                    help='''Specify the url for MONGO database. Could be:
+                            URI: mongodb://localhost:27100 or,
+                            Path to file: /var/secrets/mongodb_url (useful in docker secrets)''')
+
+args = parser.parse_args()
+mongodb_url = args.mongodb_url
+
+server = mmx_server_api(mongodb_url = mongodb_url, verbose = True)
+if not server.is_mongodb_active():
+    print('Could not connect to mongo; exiting')
+    exit()
 
 app = Flask(__name__)
 # app.debug = True

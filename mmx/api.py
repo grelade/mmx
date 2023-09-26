@@ -1,18 +1,12 @@
-from pymongo import MongoClient
-from pymongo.errors import BulkWriteError
 from typing import Union, Dict, List, Tuple
 
+from .base import mmx_server
 from .const import *
 
-class mmx_api:
+class mmx_server_api(mmx_server):
 
-    def __init__(self, verbose: bool = False):
-
-        self.mongodb = MongoClient(MONGODB_URL)
-        self.memes_col = self.mongodb[MAIN_DB][MEMES_COLLECTION]
-        self.clusters_col = self.mongodb[MAIN_DB][CLUSTERS_COLLECTION]
-
-        self.verbose = verbose
+    def __init__(self, mongodb_url: str, verbose: bool = False):
+        super().__init__(mongodb_url = mongodb_url, verbose = verbose)
 
     def read_memes(self, meme_ids: List):
         pass

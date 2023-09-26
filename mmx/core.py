@@ -1,18 +1,22 @@
 import numpy as np
+# import os
 from tqdm import tqdm
-from pymongo import MongoClient
-from pymongo.server_api import ServerApi
-from pymongo.errors import BulkWriteError
+# from pymongo import MongoClient
+# from pymongo.server_api import ServerApi
+# from pymongo.errors import BulkWriteError, ConnectionFailure
 from typing import Union, Dict, List, Tuple
+# from urllib.parse import urlparse
 
+from .base import mmx_server
 from .scraping import scraper_reddit
 from .ml import feat_extract,denstream_clustering, hcluster_clustering
 from .const import *
 from .utils import hash_string, print_red, print_green
 
-class mmx_server:
+class mmx_server_scrape_embed_cluster(mmx_server):
 
-    def __init__(self, verbose: bool = False):
+    def __init__(self, mongodb_url: str, verbose: bool = False):
+        super().__init__(mongodb_url = mongodb_url, verbose = verbose)
 
         self.scraping_module = scraper_reddit(verbose = verbose)
         self.feature_extracting_module = feat_extract(verbose = verbose)
@@ -23,15 +27,39 @@ class mmx_server:
             self._clustering_module_func = hcluster_clustering
         self.clustering_module = self._clustering_module_func(verbose = verbose)
 
-        if 'mongodb+srv' in MONGODB_URL:
-            self.mongodb = MongoClient(MONGODB_URL, server_api=ServerApi('1'))
-        else:
-            self.mongodb = MongoClient(MONGODB_URL)
+    # # general
+    # def is_mongodb_active(self):
+    #     try:
+    #         if self.verbose: print('looking for mongo database...')
+    #         # The ismaster command is cheap and does not require auth.
+    #         self.smongodb.admin.command('ismaster')
+    #         if self.verbose: print(f'Server at mongodb_url = {self.mongodb_url} found!')
+    #         return True
 
-        self.memes_col = self.mongodb[MAIN_DB][MEMES_COLLECTION]
-        self.clusters_col = self.mongodb[MAIN_DB][CLUSTERS_COLLECTION]
+    #     except ConnectionFailure:
+    #         if self.verbose: print(f'NO server at mongodb_url = {self.mongodb_url}!')
+    #         return False
 
-        self.verbose = verbose
+    # @staticmethod
+    # def _get_mongoclient(mongodb_url: str):
+    #     def is_valid_url(url):
+    #         try:
+    #             result = urlparse(url)
+    #             return all([result.scheme, result.netloc])
+    #         except ValueError:
+    #             return False
+
+    #     if os.path.exists(mongodb_url):
+    #         # path to file with url (used in docker secrets)
+    #         with open(mongodb_url) as f: mongodb_url = f.readline().strip('\n')
+
+    #     if is_valid_url(mongodb_url):
+    #         if 'mongodb+srv' in mongodb_url:
+    #             return MongoClient(mongodb_url, server_api=ServerApi('1'))
+    #         else:
+    #             return MongoClient(mongodb_url)
+    #     else:
+    #         if self.verbose: print(f'mongoclient({mongodb_url}): could not identify mongodb_url')
 
     # memes
     def _write_memes_to_db(self, memes: List[Dict]) -> bool:
@@ -236,7 +264,7 @@ class mmx_server:
         prev_snapshot_timestamp = prev_snapshot[CLUSTERS_COL_SNAPSHOT][CLUSTERS_COL_SNAPSHOT_TIMESTAMP]
 
         memes = self._read_memes_between_timestamps(timestamp_min = prev_snapshot_timestamp, timestamp_max = snapshot_timestamp)
-        string_repr = mmx_server._form_string_repr(memes)
+        string_repr = mmx_server_scrape_embed_cluster._form_string_repr(memes)
 
         if snapshot_hash != hash_string(prev_snapshot_hash + string_repr):
             return False
@@ -305,7 +333,7 @@ class mmx_server:
                 prev_snapshot_timestamp = prev_snapshot[CLUSTERS_COL_SNAPSHOT][CLUSTERS_COL_SNAPSHOT_TIMESTAMP]
 
             memes = self._read_memes_between_timestamps(timestamp_min = prev_snapshot_timestamp, timestamp_max = snapshot_timestamp)
-            string_repr = mmx_server._form_string_repr(memes)
+            string_repr = mmx_server_scrape_embed_cluster._form_string_repr(memes)
 
             # if  snapshot_ntotal != prev_snapshot_ntotal + len(memes):
             #     if self.verbose: print('CLUSTERS_COL_SNAPSHOT_NTOTAL: inconsistency')
@@ -356,7 +384,7 @@ class mmx_server:
         new_timestamp = max([x[MEMES_COL_PUBL_TIMESTAMP] for x in new_data])
         new_ntotal = previous_clustering_snapshot[CLUSTERS_COL_SNAPSHOT][CLUSTERS_COL_SNAPSHOT_NTOTAL] + len(new_data)
         hash_base = previous_clustering_snapshot[CLUSTERS_COL_SNAPSHOT][CLUSTERS_COL_SNAPSHOT_HASH]
-        new_string_repr = mmx_server._form_string_repr(new_data)
+        new_string_repr = mmx_server_scrape_embed_cluster._form_string_repr(new_data)
         new_hash = hash_string(hash_base + new_string_repr)
         new_clustered_ids = self.clustering_module.clusters
         new_snapshot_info_dict = {CLUSTERS_COL_SNAPSHOT_TIMESTAMP: new_timestamp,

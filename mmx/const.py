@@ -1,13 +1,5 @@
-import os
 
-
-
-# mongo server
-MONGODB_URL_PATH = '/run/secrets/mongodb_url'
-if os.path.exists(MONGODB_URL_PATH):
-    with open(MONGODB_URL_PATH) as f: MONGODB_URL = f.readline().strip('\n')
-else:
-    MONGODB_URL = 'mongodb://mongo:27017'
+# mongodb
 DESCENDING = -1 # pymongo consts
 ASCENDING = 1 # pymongo consts
 MAIN_DB = 'mmx'
@@ -34,12 +26,10 @@ CLUSTERS_COL_CLUSTERING_STATE_DICT = 'state_dict'
 CLUSTERS_COL_SNAPSHOT_CLUSTERS_INFO = 'data_clusters_info'
 
 
-
-# REST API server
+# api server
 API_V1_BASE_URL = '/api/v1'
 API_PAGE_LIMIT = 50
 API_NEXT_URL = 'next_url'
-
 
 
 # embed server
@@ -47,13 +37,9 @@ FEAT_EXTRACT_API_URL = 'http://embed:8001/embedding'
 EMBEDDING_MODEL_PATH = 'mmx/embed_model/mobilenet_v3_small_075_224_embedder.tflite'
 
 
-
 # cluster server
-CLUSTERING_JOB_INTERVAL = 120
 CLUSTERING_MODEL = 'hcluster'
 # CLUSTERING_MODEL = 'denstream'
-# CLUSTERING_BATCH_SIZE = None
-CLUSTERING_BATCH_SIZE = 500
 
 # denstream_clustering algorithm parameters
 DENSTREAM_EPS = 12
@@ -65,10 +51,10 @@ DENSTREAM_LAMBDA = 1e-12
 HCLUSTER_THRESHOLD = 6.4
 
 
-
 # scrape server
 SCRAPING_JOB_INTERVAL = 60
 BASEURL_REDDIT = "https://old.reddit.com/r/"
 SUBREDDITS = ['memes','dankmemes','wholesomememes',
               'MemeEconomy','AdviceAnimals','ComedyCemetery',
               'terriblefacebookmemes','funny']
+# SUBREDDITS = ['memes']
