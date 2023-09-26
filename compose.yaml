@@ -1,103 +1,121 @@
-# Comments are provided throughout this file to help you get started.
-# If you need more help, visit the Docker compose reference guide at
-# https://docs.docker.com/compose/compose-file/
-
-# Here the instructions define your application as a service called "server".
-# This service is built from the Dockerfile in the current directory.
-# You can add other services your application may depend on here, such as a
-# database or a cache. For examples, see the Awesome Compose repository:
-# https://github.com/docker/awesome-compose
+name: mmx
+version: '0.1'
 services:
 
-  apiserver:
-    build: .
+  api:
+    build: ./dockers/api
     ports:
-      - 8000:8000
-    depends_on:
-      - mongo
+      - 20410:8002
+    # depends_on:
+    #   - mongo
     networks:
     - node-network
     volumes:
       - type: bind
-        source: ./
-        target: /mmx_app/
-    # command: sh -c "python server_api.py"
-    command: sh -c "watchmedo auto-restart -p \"*.py\" python server_api.py"
-  scraper:
-    build: .
-    depends_on:
-      - mongo
-    networks:
-    - node-network
-    volumes:
+        source: ./dockers/api
+        target: /mmx_app
       - type: bind
-        source: ./
-        target: /mmx_app/
-    command: sh -c "python server_scrape.py"
+        source: ./mmx
+        target: /mmx_app/mmx
+    secrets:
+      - mongodb_url
+
+    # command: sh -c "python server.py"
+    command: sh -c "watchmedo auto-restart -p \"*.py\" -- python server.py --mongodb_url=${MONGODB_URL}"
+
 
   cluster:
-    build: .
-    depends_on:
-      - mongo
+    build: ./dockers/cluster
+    restart: no
+    # depends_on:
+    #   - mongo
     networks:
     - node-network
     volumes:
       - type: bind
-        source: ./
+        source: ./dockers/cluster
         target: /mmx_app/
+      - type: bind
+        source: ./mmx/
+        target: /mmx_app/mmx/
+    secrets:
+      - mongodb_url
+    environment:
+      - MONGODB_URL
+      - CLUSTER_RUN_MODE
+      - CLUSTER_JOB_INTERVAL
+      - CLUSTER_BATCH_SIZE
 
-    command: sh -c "python server_cluster.py"
+    command: sh -c "bash run.sh"
+    # command: sh -c "python server.py --mongodb_url=${MONGODB_URL}"
+    # command: sh -c "watchmedo auto-restart -p \"*.py\" -- python server.py --mongodb_url=${MONGODB_URL} --run_mode ${CLUSTER_RUN_MODE} --job_interval ${CLUSTER_JOB_INTERVAL} --batch_size ${CLUSTER_BATCH_SIZE}"
 
-  mongo:
-    image: 'mongo:latest'
+
+  embed:
+    build: ./dockers/embed
     ports:
-     - 27018:27017
-    volumes:
-      - type: volume
-        source: dbdata
-        target: /data/db
+      - 8001:8001
     networks:
-      - node-network
+    - node-network
+    volumes:
+      - type: bind
+        source: ./dockers/embed
+        target: /mmx_app
+      - type: bind
+        source: ./mmx/
+        target: /mmx_app/mmx/
+    secrets:
+      - mongodb_url
 
-volumes:
-  dbdata:
+    # command: sh -c "python server.py"
+    command: sh -c "watchmedo auto-restart -p \"*.py\" -- python server.py"
 
 
+  scrape:
+    build: ./dockers/scrape
+    depends_on:
+      # - mongo
+      - embed
+    networks:
+    - node-network
+    volumes:
+      - type: bind
+        source: ./dockers/scrape
+        target: /mmx_app/
+      - type: bind
+        source: ./mmx/
+        target: /mmx_app/mmx/
+    secrets:
+      - mongodb_url
+    environment:
+      - MONGODB_URL
+      - SCRAPE_RUN_MODE
+      - SCRAPE_JOB_INTERVAL
 
-# The commented out section below is an example of how to define a PostgreSQL
-# database that your application can use. `depends_on` tells Docker Compose to
-# start the database before your application. The `db-data` volume persists the
-# database data between container restarts. The `db-password` secret is used
-# to set the database password. You must create `db/password.txt` and add
-# a password of your choosing to it before running `docker compose up`.
-#     depends_on:
-#       db:
-#         condition: service_healthy
-#   db:
-#     image: postgres
-#     restart: always
-#     user: postgres
-#     secrets:
-#       - db-password
-#     volumes:
-#       - db-data:/var/lib/postgresql/data
-#     environment:
-#       - POSTGRES_DB=example
-#       - POSTGRES_PASSWORD_FILE=/run/secrets/db-password
-#     expose:
-#       - 5432
-#     healthcheck:
-#       test: [ "CMD", "pg_isready" ]
-#       interval: 10s
-#       timeout: 5s
-#       retries: 5
+    command: sh -c "bash run.sh"
+    # command: sh -c "python server.py --mongodb_url=${MONGODB_URL} --run_mode ${SCRAPE_RUN_MODE} --job_interval ${SCRAPE_JOB_INTERVAL}"
+    # command: sh -c "watchmedo auto-restart -p \"*.py\" -- python server.py --mongodb_url=${MONGODB_URL} --run_mode ${SCRAPE_RUN_MODE} --job_interval ${SCRAPE_JOB_INTERVAL}"
+
+
+  # mongo:
+  #   image: 'mongo:latest'
+  #   ports:
+  #    - 30410:27017
+  #   volumes:
+  #     - type: volume
+  #       source: dbdata
+  #       target: /data/db
+  #   networks:
+  #     - node-network
+
 # volumes:
-#   db-data:
-# secrets:
-#   db-password:
-#     file: db/password.txt
-
+#   dbdata:
 
 networks:
   node-network:
     driver: bridge
+
+secrets:
+  mongodb_url:
+    file : ./mongodb_url
+

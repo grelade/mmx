@@ -2,98 +2,54 @@ import numpy as np
 from typing import Union, List, Dict
 from tqdm import tqdm
 import scipy.cluster.hierarchy
-
-import torch
-import torch.nn as nn
-from torchvision.io import read_image, ImageReadMode
-from torchvision.models.quantization import resnet50, ResNet50_QuantizedWeights
-from torchvision.models.quantization import mobilenet_v3_large, MobileNet_V3_Large_QuantizedWeights
-from torchvision.models.quantization import resnet18, ResNet18_QuantizedWeights
+import requests
 
 from .denstream import DenStream
 from .utils import download_url
 from .const import *
 
-class identity(nn.Module):
-    def __init__(self):
-        super().__init__()
 
-    def forward(self, x):
-        return x
 
 class feat_extract:
     '''
     feature extraction module: output features from an image using an ML model
     '''
+
     def __init__(self,
-                 model: str = 'resnet50',
                  verbose: bool = False) -> None:
 
-        self.embedding_model, self.preprocess_model = feat_extract._get_model(model)
         self.verbose = verbose
 
-    @staticmethod
-    def _get_model(model: str):
-        if model == 'resnet50':
-            # 2048 features
-            weights = ResNet50_QuantizedWeights.DEFAULT
-            preprocess = weights.transforms()
-            model = resnet50(weights=weights, quantize=True)
-            model.fc = identity()
-            model.eval()
-            return model, preprocess
+    # def get_features(self,image_array: np.ndarray) -> Union[np.ndarray,None]:
 
-        elif model == 'resnet18':
-            # 512 features
-            weights = ResNet18_QuantizedWeights.DEFAULT
-            preprocess = weights.transforms()
-            model = resnet18(weights=weights, quantize=True)
-            model.fc = identity()
-            model.eval()
-            return model, preprocess
+    #     output = None
+    #     if isinstance(image_array,np.ndarray):
+    #         output = self.embedding_model(image_array)
+    #     return output
 
-        elif model == 'mobilenet':
-            # 960 features
-            weights = MobileNet_V3_Large_QuantizedWeights.DEFAULT
-            preprocess = weights.transforms()
-            model = mobilenet_v3_large(weights=weights, quantize=True)
-            model.classifier = identity()
-            model.eval()
-            return model, preprocess
+    def get_features_from_url(self, image_url: str) -> Union[np.ndarray,None]:
 
-        else:
-            if self.verbose: print(f'unknown model = {model}')
-            return None, None
+        image_path = download_url(image_url = image_url)
 
-    @staticmethod
-    def image_url_to_tensor(image_url: str) -> Union[torch.Tensor,None]:
-
-        temp_path = download_url(image_url = image_url)
         img = None
         try:
-            if temp_path:
-                img = read_image(temp_path, mode = ImageReadMode.RGB)
+            if image_path:
+                with open(image_path, "rb") as f:
+                    image = f.read()
+
+                headers = {}
+                response = requests.post(FEAT_EXTRACT_API_URL,
+                                         headers = headers,
+                                         files = {'file':image})
+
+                response = response.json()
+                if 'img_embed' in response.keys():
+                    img = np.array(response['img_embed'])
 
         except RuntimeError as e:
             print(f'read_image({image_url}) error: {e}')
 
         return img
-
-    def get_features(self, image_tensor: torch.Tensor) -> Union[np.ndarray,None]:
-        # output = 2*np.random.rand() - 1 + 0.1*np.array([random.random() for _ in range(128)])
-        # output = output.astype(np.float32)
-        output = None
-        if isinstance(image_tensor,torch.Tensor):
-            batch = self.preprocess_model(image_tensor).unsqueeze(0)
-            output = self.embedding_model(batch).squeeze().numpy()
-
-        return output
-
-    def get_features_from_url(self, image_url: str) -> Union[np.ndarray,None]:
-        image_tensor = feat_extract.image_url_to_tensor(image_url)
-        # print(image_url, image_tensor.shape)
-        feat = self.get_features(image_tensor)
-        return feat
 
     def get_features_from_urls(self,image_urls: List[str]) -> List[np.ndarray]:
 
@@ -105,17 +61,7 @@ class feat_extract:
 
         return features
 
-# class clustering:
-#     def __init__(self,*args,**kwargs):
-#         self.alg_func = None
-#         self.verbose = None
-#         self.labels = None
 
-#     def append_data(self, data: List[Dict]) -> None:
-#         pass
-
-#     def fetch_clusters(self) -> List:
-#         pass
 
 class hcluster_clustering:
 
@@ -166,6 +112,7 @@ class hcluster_clustering:
             print('no data! run append_data')
 
 
+
 class hcluster_wrapper:
     '''
     wrapper of hcluster including load_dict methods
@@ -199,6 +146,8 @@ class hcluster_wrapper:
 
     def load_state_dict_compressed(self, state_dict_compressed: Dict, decompressor_func = None):
         self.load_state_dict(state_dict_compressed)
+
+
 
 class denstream_clustering:
     '''denstream clustering module'''
