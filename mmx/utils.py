@@ -20,13 +20,16 @@ def hash_string(input_string):
 
     return hashed_string
 
-def download_url(image_url: str) -> str:
+def download_url(image_url: str,out_path: str = None) -> str:
     '''
     download image file located at image_url.
     Returns temp file path or None if no file/inappropriate file.
     '''
     TEMP_PATH = 'img.tmp'
-
+    
+    if out_path:
+        TEMP_PATH = out_path
+        
     while True:
         path = None
         try:

@@ -1,4 +1,6 @@
 from flask import Flask, request, send_file
+from flask_cors import CORS
+
 import argparse
 
 import sys
@@ -23,6 +25,7 @@ if not server.is_mongodb_active():
     exit()
 
 app = Flask(__name__)
+CORS(app)
 # app.debug = True
 
 @app.route(f"{API_V1_BASE_URL}/")
