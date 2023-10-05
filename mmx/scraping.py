@@ -4,6 +4,7 @@ import sys
 import re
 import time
 from typing import List, Dict
+from datetime import datetime
 
 from .const import *
 
@@ -47,7 +48,7 @@ class scraper_reddit:
 
     def load_subreddit(self,subreddit: str = 'memes'):
         self.subreddit = subreddit
-        self.subreddit_url = BASEURL_REDDIT + subreddit
+        self.subreddit_url = BASEURL_REDDIT + subreddit + '/?limit=100'
 
     @staticmethod
     def _extract_meme_ids(html: str) -> List:
@@ -201,24 +202,29 @@ class scraper_reddit:
             comments = comments[sub_ixs]
             publ_timestamps = publ_timestamps[sub_ixs]
 
+        snapshot_timestamps = [int(datetime.now().timestamp()*1000)]*len(ids)
 
         subreddits = np.array([self.subreddit]*len(ids))
 
         return {MEMES_COL_ID: ids,
                 MEMES_COL_IMAGE_URL: image_urls,
                 MEMES_COL_TITLE: titles,
-                MEMES_COL_UPVOTES: upvotes,
-                MEMES_COL_COMMENTS: comments,
+                MEMES_COL_SNAPSHOT: {MEMES_COL_SNAPSHOT_TIMESTAMP: snapshot_timestamps,
+                                     MEMES_COL_SNAPSHOT_UPVOTES: upvotes,
+                                     MEMES_COL_SNAPSHOT_COMMENTS: comments},
+                # MEMES_COL_UPVOTES: upvotes,
+                # MEMES_COL_COMMENTS: comments,
                 MEMES_COL_PUBL_TIMESTAMP: publ_timestamps,
                 MEMES_COL_SUBREDDIT: subreddits}
 
     @staticmethod
-    def _convert_data_dict_to_db_list(data_dict: Dict) -> List:
+    def _convert_data_dict_shallow_to_db_list(data_dict: Dict) -> List:
         '''
         convert memes data dictionary returned by the self._fetch_memes_to_data_dict to a mongodb-friendly list of records
         '''
         keys = data_dict.keys()
         arr = [data_dict[k] for k in keys]
+
         db_list = []
         for values in zip(*arr):
             rec = dict()
@@ -232,11 +238,25 @@ class scraper_reddit:
 
         return db_list
 
+    @staticmethod
+    def _convert_data_dict_to_db_list(data_dict: Dict) -> List:
+        conv = scraper_reddit._convert_data_dict_to_db_list
+        conv_shallow = scraper_reddit._convert_data_dict_shallow_to_db_list
+
+        if isinstance(data_dict, dict):
+            if not all(map(lambda x: isinstance(x,(list, np.ndarray)), data_dict.values())):
+                data_dict = {k: conv(v) for k,v in data_dict.items()}
+
+            return conv_shallow(data_dict)
+        elif isinstance(data_dict, (list, np.ndarray)):
+            return data_dict
+
     def fetch_memes(self,
                     n_pages: int = -1,
                     end_at_timestamp: int = None) -> List:
 
         data_dict = self._fetch_memes_to_data_dict(n_pages = n_pages, end_at_timestamp = end_at_timestamp)
+
         memes = scraper_reddit._convert_data_dict_to_db_list(data_dict)
         return memes
 

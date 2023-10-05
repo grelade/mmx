@@ -10,59 +10,6 @@ from .const import *
 
 
 
-class feat_extract:
-    '''
-    feature extraction module: output features from an image using an ML model
-    '''
-
-    def __init__(self,
-                 verbose: bool = False) -> None:
-
-        self.verbose = verbose
-
-    # def get_features(self,image_array: np.ndarray) -> Union[np.ndarray,None]:
-
-    #     output = None
-    #     if isinstance(image_array,np.ndarray):
-    #         output = self.embedding_model(image_array)
-    #     return output
-
-    def get_features_from_url(self, image_url: str) -> Union[np.ndarray,None]:
-
-        image_path = download_url(image_url = image_url)
-
-        img = None
-        try:
-            if image_path:
-                with open(image_path, "rb") as f:
-                    image = f.read()
-
-                headers = {}
-                response = requests.post(FEAT_EXTRACT_API_URL,
-                                         headers = headers,
-                                         files = {'file':image})
-
-                response = response.json()
-                if 'img_embed' in response.keys():
-                    img = np.array(response['img_embed'])
-
-        except RuntimeError as e:
-            print(f'read_image({image_url}) error: {e}')
-
-        return img
-
-    def get_features_from_urls(self,image_urls: List[str]) -> List[np.ndarray]:
-
-        if self.verbose: print(f'n_features = {len(image_urls)}')
-        features = []
-        for image_url in tqdm(image_urls):
-            feature = self.get_features_from_url(image_url)
-            features += [feature]
-
-        return features
-
-
-
 class hcluster_clustering:
 
     def __init__(self,

@@ -52,7 +52,9 @@ class mmx_server:
 
         if os.path.exists(mongodb_url):
             # path to file with url (used in docker secrets)
-            with open(mongodb_url) as f: mongodb_url = f.readline().strip('\n')
+            with open(mongodb_url) as f:
+                mongodb_url = f.readline().strip('\n')
+                print(mongodb_url)
 
         if is_valid_url(mongodb_url):
             if 'mongodb+srv' in mongodb_url:
@@ -62,7 +64,6 @@ class mmx_server:
         else:
             if self.verbose: print(f'mongoclient({mongodb_url}): could not identify mongodb_url')
             return None
-
     # memes
     def _write_memes_to_db(self, memes: List[Dict]) -> bool:
         if self.verbose: print('_write_memes_to_db')
@@ -87,7 +88,8 @@ class mmx_server:
         ensure memes extracted from mongodb are in the correct format used in the mmx_server.
         if send_to_db = True, validate meme record to fit the mongodb format instead.
         '''
-        keys = [MEMES_COL_ID,MEMES_COL_IMAGE_URL,MEMES_COL_TITLE,MEMES_COL_UPVOTES,MEMES_COL_COMMENTS,MEMES_COL_PUBL_TIMESTAMP,MEMES_COL_SUBREDDIT]
+        keys = [MEMES_COL_ID,MEMES_COL_IMAGE_URL,MEMES_COL_TITLE,MEMES_COL_SNAPSHOT,MEMES_COL_PUBL_TIMESTAMP,MEMES_COL_SUBREDDIT]
+        # snapshot_subkeys = [MEMES_COL_SNAPSHOT_COMMENTS,MEMES_COL_SNAPSHOT_TIMESTAMP,MEMES_COL_SNAPSHOT_UPVOTES]
 
         # msg = ''
         # for key in keys+[MEMES_COL_FEAT_VEC]:
@@ -103,6 +105,7 @@ class mmx_server:
                 if isinstance(meme[key],list):
                     meme[key] = meme[key][0]
 
+
         # ensure correct types are passed on
         if MEMES_COL_ID in meme.keys():
             if not isinstance(meme[MEMES_COL_ID],str):
@@ -116,13 +119,16 @@ class mmx_server:
             if not isinstance(meme[MEMES_COL_TITLE],str):
                 meme[MEMES_COL_TITLE] = str(meme[MEMES_COL_TITLE])
 
-        if MEMES_COL_UPVOTES in meme.keys():
-            if not isinstance(meme[MEMES_COL_UPVOTES],int):
-                meme[MEMES_COL_UPVOTES] = int(meme[MEMES_COL_UPVOTES])
-
-        if MEMES_COL_COMMENTS in meme.keys():
-            if not isinstance(meme[MEMES_COL_COMMENTS],int):
-                meme[MEMES_COL_COMMENTS] = int(meme[MEMES_COL_COMMENTS])
+        if MEMES_COL_SNAPSHOT in meme.keys():
+            if MEMES_COL_SNAPSHOT_COMMENTS in meme[MEMES_COL_SNAPSHOT].keys():
+                if not isinstance(meme[MEMES_COL_SNAPSHOT][MEMES_COL_SNAPSHOT_COMMENTS],int):
+                    meme[MEMES_COL_SNAPSHOT][MEMES_COL_SNAPSHOT_COMMENTS] = int(meme[MEMES_COL_SNAPSHOT][MEMES_COL_SNAPSHOT_COMMENTS])
+            if MEMES_COL_SNAPSHOT_UPVOTES in meme[MEMES_COL_SNAPSHOT].keys():
+                if not isinstance(meme[MEMES_COL_SNAPSHOT][MEMES_COL_SNAPSHOT_UPVOTES],int):
+                    meme[MEMES_COL_SNAPSHOT][MEMES_COL_SNAPSHOT_UPVOTES] = int(meme[MEMES_COL_SNAPSHOT][MEMES_COL_SNAPSHOT_UPVOTES])
+            if MEMES_COL_SNAPSHOT_TIMESTAMP in meme[MEMES_COL_SNAPSHOT].keys():
+                if not isinstance(meme[MEMES_COL_SNAPSHOT][MEMES_COL_SNAPSHOT_TIMESTAMP],int):
+                    meme[MEMES_COL_SNAPSHOT][MEMES_COL_SNAPSHOT_TIMESTAMP] = int(meme[MEMES_COL_SNAPSHOT][MEMES_COL_SNAPSHOT_TIMESTAMP])
 
         if MEMES_COL_PUBL_TIMESTAMP in meme.keys():
             if not isinstance(meme[MEMES_COL_PUBL_TIMESTAMP],int):

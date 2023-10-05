@@ -3,12 +3,13 @@ import sys
 sys.path.append('./')
 
 from mmx.embed import embedder
+from mmx.const import *
 
 app = Flask(__name__)
 # app.debug=True
 
 em = embedder()
-em.load_model('mobilenet-v3-224')
+em.load_model(EMBEDDING_MODEL)
 
 @app.route("/embedding",methods=["POST"])
 def calc_img_embedding():

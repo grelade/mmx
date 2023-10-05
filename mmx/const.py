@@ -1,20 +1,24 @@
 
 # mongodb
-DESCENDING = -1 # pymongo consts
-ASCENDING = 1 # pymongo consts
+DESCENDING = -1 # hardcoded pymongo consts
+ASCENDING = 1 # hardcoded pymongo consts
 MAIN_DB = 'mmx'
-MEMES_COLLECTION = 'memes'
+MEMES_COLLECTION = 'memes_test'
 CLUSTERS_COLLECTION = 'clusters'
 
 # memes collection
-MEMES_COL_ID = 'id'
+MEMES_COL_ID = 'meme_id'
 MEMES_COL_IMAGE_URL = 'image_url'
 MEMES_COL_TITLE = 'title'
-MEMES_COL_UPVOTES = 'upvotes'
-MEMES_COL_COMMENTS = 'comments'
 MEMES_COL_PUBL_TIMESTAMP = 'publ_timestamp'
 MEMES_COL_FEAT_VEC = 'feat_vec'
 MEMES_COL_SUBREDDIT = 'subreddit'
+MEMES_COL_SNAPSHOT = 'snapshots'
+MEMES_COL_SNAPSHOT_TIMESTAMP = 'timestamp'
+MEMES_COL_SNAPSHOT_UPVOTES = 'upvotes'
+MEMES_COL_SNAPSHOT_COMMENTS = 'comments'
+
+
 
 # clusters collection
 CLUSTERS_COL_SNAPSHOT = 'snapshot'
@@ -38,7 +42,8 @@ API_NEXT_URL = 'next_url'
 
 # embed server
 FEAT_EXTRACT_API_URL = 'http://embed:8001/embedding'
-EMBEDDING_MODEL_PATH = 'mmx/embed_model/mobilenet_v3_small_075_224_embedder.tflite'
+# EMBEDDING_MODEL = 'mobilenet_v3'
+EMBEDDING_MODEL = 'resnet50'
 
 
 # cluster server
