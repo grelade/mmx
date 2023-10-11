@@ -181,7 +181,7 @@ class scraper_reddit:
 
         if len(ids.shape) > 1 or len(image_urls.shape) > 1 or len(titles.shape) > 1 or len(upvotes.shape) > 1 or len(comments.shape) > 1 or len(publ_timestamps.shape) > 1:
             print(ids.shape, image_urls.shape, titles.shape, upvotes.shape, comments.shape, publ_timestamps.shape)
-            input('WAITING')
+            # input('WAITING')
 
         # sort the scraped memes
         sort_ixs = np.argsort(publ_timestamps)
@@ -205,15 +205,26 @@ class scraper_reddit:
         snapshot_timestamps = [int(datetime.now().timestamp()*1000)]*len(ids)
 
         subreddits = np.array([self.subreddit]*len(ids))
+        image_urls_local = [None]*len(ids)
+        image_urls_alter = [None]*len(ids)
+
+        # return {MEMES_COL_ID: ids,
+        #         MEMES_COL_IMAGE_URL: image_urls,
+        #         MEMES_COL_TITLE: titles,
+        #         MEMES_COL_SNAPSHOT: {MEMES_COL_SNAPSHOT_TIMESTAMP: snapshot_timestamps,
+        #                              MEMES_COL_SNAPSHOT_UPVOTES: upvotes,
+        #                              MEMES_COL_SNAPSHOT_COMMENTS: comments},
+        #         MEMES_COL_PUBL_TIMESTAMP: publ_timestamps,
+        #         MEMES_COL_SUBREDDIT: subreddits}
 
         return {MEMES_COL_ID: ids,
-                MEMES_COL_IMAGE_URL: image_urls,
+                MEMES_COL_IMAGE_URL: {MEMES_COL_IMAGE_URL_SOURCE :image_urls,
+                                      MEMES_COL_IMAGE_URL_LOCAL: image_urls_local,
+                                      MEMES_COL_IMAGE_URL_ALTER: image_urls_alter},
                 MEMES_COL_TITLE: titles,
                 MEMES_COL_SNAPSHOT: {MEMES_COL_SNAPSHOT_TIMESTAMP: snapshot_timestamps,
                                      MEMES_COL_SNAPSHOT_UPVOTES: upvotes,
                                      MEMES_COL_SNAPSHOT_COMMENTS: comments},
-                # MEMES_COL_UPVOTES: upvotes,
-                # MEMES_COL_COMMENTS: comments,
                 MEMES_COL_PUBL_TIMESTAMP: publ_timestamps,
                 MEMES_COL_SUBREDDIT: subreddits}
 

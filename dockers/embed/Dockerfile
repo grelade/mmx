@@ -39,7 +39,8 @@ RUN --mount=type=cache,target=/home/grela/.cache/pip \
 
 RUN apt-get update
 RUN apt install libgl1-mesa-glx -y
-RUN  apt install libglib2.0-0 -y
+RUN apt install libglib2.0-0 -y
+RUN apt install libusb-1.0-0 -y
 # RUN apt-get install ffmpeg libsm6 libxext6 -y
 #numba tmp directory hack
 
