@@ -50,7 +50,7 @@ class features_module:
 
         return img
 
-    def get_features_from_url(self, image_url: str, emb_mode: str = 'api') -> Union[np.ndarray,None]:
+    def get_features_from_url(self, image_url: str, extract_mode: str = 'api') -> Union[np.ndarray,None]:
 
         img = None
         try:
@@ -62,9 +62,9 @@ class features_module:
                 image_path = None
 
             if image_path:
-                if emb_mode == 'local':
+                if extract_mode == 'local':
                     img = self._extract_via_local_feat_extractor(image_path)
-                elif emb_mode == 'api':
+                elif extract_mode == 'api':
                     img = self._extract_via_api(image_path)
 
         except RuntimeError as e:

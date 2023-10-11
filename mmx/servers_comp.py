@@ -1,3 +1,4 @@
+import os
 from typing import Union, Dict, List, Tuple
 from pymongo.errors import BulkWriteError
 
@@ -6,6 +7,7 @@ from .servers_core import mmx_server
 from .scraping import scraper_reddit
 from .featvec import features_module
 from .utils import fetch_internal_image_url, download_local_image_url, form_local_image_path
+
 
 class mmx_server_scrape_featvec(mmx_server):
 
@@ -18,6 +20,7 @@ class mmx_server_scrape_featvec(mmx_server):
     def _put_memes_and_featvecs(self, memes: List[Dict]) -> bool:
         try:
 
+            # calc the number of new/old memes in memes
             meme_ids = [x[MEMES_COL_ID] for x in memes]
             n_update_memes = self.memes_col.count_documents({MEMES_COL_ID:{'$in':meme_ids}})
             n_all_memes = len(memes)
@@ -40,15 +43,17 @@ class mmx_server_scrape_featvec(mmx_server):
 
                     if not meme[MEMES_COL_IMAGE_URL][MEMES_COL_IMAGE_URL_LOCAL]:
                         image_path = form_local_image_path(meme)
+
                         if image_path:
-                            # print('image already found in local image path')
-                            meme[MEMES_COL_IMAGE_URL][MEMES_COL_IMAGE_URL_LOCAL] = image_path
-                        else:
-                            # print('downloading the image...')
-                            meme = download_local_image_url(meme)
+                            if os.path.isfile(image_path):
+                                print('image already found in local image path')
+                                meme[MEMES_COL_IMAGE_URL][MEMES_COL_IMAGE_URL_LOCAL] = image_path
+                            else:
+                                print('downloading the image...')
+                                meme = download_local_image_url(meme)
 
                     image_url = fetch_internal_image_url(meme)
-
+                    print(image_url)
                     meme[MEMES_COL_FEAT_VEC] = self.feature_extracting_module.get_features_from_url(image_url)
                     meme[MEMES_COL_FEAT_VEC_MODEL] = FEAT_EXTRACT_MODEL
                     meme = self._validate_meme(meme = meme, send_to_db = True)

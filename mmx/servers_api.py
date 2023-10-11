@@ -170,9 +170,9 @@ drop = lambda field: {'$unset': field}
 
 
 
-class mmx_server_api(mmx_server):
-    def __init__(self, mongodb_url: str, verbose: bool = False):
-        super().__init__(mongodb_url = mongodb_url, verbose = verbose)
+# class mmx_server_api(mmx_server):
+#     def __init__(self, mongodb_url: str, verbose: bool = False):
+#         super().__init__(mongodb_url = mongodb_url, verbose = verbose)
 
 class info_view(FlaskView):
     route_prefix = API_V1_BASE_URL

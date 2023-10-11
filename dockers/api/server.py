@@ -4,7 +4,8 @@ from flask_cors import CORS
 
 import sys
 sys.path.append('./')
-from mmx.servers_api import mmx_server_api, info_view,memes_view
+from mmx.servers_core import mmx_server
+from mmx.servers_api import info_view,memes_view
 from mmx.const import *
 
 parser = argparse.ArgumentParser(description='mmx api server')
@@ -20,7 +21,7 @@ app = Flask(__name__)
 CORS(app)
 
 mongodb_url = args.mongodb_url
-server = mmx_server_api(mongodb_url = mongodb_url, verbose = True)
+server = mmx_server(mongodb_url = mongodb_url, verbose = True)
 
 info_view.register(app)
 memes_view.register(app,init_argument = server)
