@@ -1,43 +1,71 @@
 import numpy as np
-import mediapipe as mp
+import tflite_support
 from PIL import Image, UnidentifiedImageError
 from typing import Union, List
-
+from werkzeug.datastructures import FileStorage
 from .const import *
 
-BaseOptions = mp.tasks.BaseOptions
-ImageEmbedder = mp.tasks.vision.ImageEmbedder
-ImageEmbedderOptions = mp.tasks.vision.ImageEmbedderOptions
-VisionRunningMode = mp.tasks.vision.RunningMode
+AVAILABLE_EMBEDDING_MODELS = {'mobilenet_v3_small': 'mmx/embed_model/mobilenet_v3_small.tflite',
+                              'mobilenet_v3_large': 'mmx/embed_model/mobilenet_v3_large.tflite',
+                              'resnet_v1_50': 'mmx/embed_model/resnet_v1_50.tflite',
+                              'efficientnet_v2_m': 'mmx/embed_model/efficientnet_v2_m.tflite'}
 
 class embedder:
 
-    def __init__(self, quantize_model: bool = True):
+    def __init__(self):
 
         self.model_name = None
-        self.quantize_model = quantize_model
         self.model = None
+        self.input_image_size = None
+        self.n_features = None
 
-    def load_model(self,model_name: str):
-        if model_name != self.model_name:
+    def _infer_model_parameters(self, model_path: str):
+        md = tflite_support.metadata.MetadataDisplayer.with_model_file(model_path)
+        metadata = eval(md.get_metadata_json())
+        input_metadata = metadata['subgraph_metadata'][0]['input_tensor_metadata'][0]['description']
+        output_metadata = metadata['subgraph_metadata'][0]['output_tensor_metadata'][0]['description']
+        if 'optimal_input_size' in input_metadata:
+            self.input_image_size = eval(input_metadata.split('=')[1])
+        else:
+            print(f'''could not infer input_image_size from "{input_metadata}"''')
+            self.input_image_size = [224,224]
+            print(f'setting input_image_size = {self.input_image_size}')
 
-            options = ImageEmbedderOptions(
-                base_options=BaseOptions(model_asset_path=EMBEDDING_MODEL_PATH),
-                quantize=self.quantize_model,
-                running_mode=VisionRunningMode.IMAGE)
+        if 'n_features' in output_metadata:
+            self.n_features = eval(output_metadata.split('=')[1])
+        else:
+            print(f'''could not infer n_features from "{output_metadata}"''')
+            self.n_features = 1024
+            print(f'setting n_features = {self.n_features}')
 
-            self.model = ImageEmbedder.create_from_options(options)
-            self.model_name = model_name
+    def load_model(self, model_name: str = EMBEDDING_MODEL) -> bool:
 
-    def embed_file(self,file_storage) -> Union[None,List]:
+        for model_name_, model_path in AVAILABLE_EMBEDDING_MODELS.items():
+            if model_name == model_name_:
+                self.model = tflite_support.task.vision.ImageEmbedder.create_from_file(model_path)
+                self._infer_model_parameters(model_path)
+                self.model_name = model_name
+                return True
+        return False
+
+
+    def embed_file(self, file_storage: Union[FileStorage,str]) -> Union[None,List]:
         output = None
         try:
-            img = Image.open(file_storage.stream)
+
+            if isinstance(file_storage,FileStorage):
+                img = Image.open(file_storage.stream)
+            else:
+                img = Image.open(file_storage)
+
+            img = img.resize(self.input_image_size)
+            img = img.convert(mode='RGB')
             img_array = np.array(img)
-            img = mp.Image(image_format=mp.ImageFormat.SRGB, data=img_array)
+
+            img = tflite_support.task.vision.TensorImage(img_array)
             embedding_result = self.model.embed(img)
             del img,img_array
-            output = embedding_result.embeddings[0].embedding.tolist()
+            output = embedding_result.embeddings[0].feature_vector.value.tolist()
 
         except UnidentifiedImageError as e:
             print(f'UnidentifiedImageError: embedding fail {e}')
@@ -46,5 +74,4 @@ class embedder:
 
     def __exit__(self, exc_type, exc_value, exc_traceback):
         self.model.close()
-
 

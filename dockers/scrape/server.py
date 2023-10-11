@@ -5,7 +5,7 @@ import argparse
 
 import sys
 sys.path.append('./')
-from mmx.servers_comp import mmx_server_scrape_embed
+from mmx.servers_comp import mmx_server_scrape_featvec
 
 parser = argparse.ArgumentParser(description='mmx scrape server')
 
@@ -27,7 +27,7 @@ mongodb_url = args.mongodb_url
 run_mode = args.run_mode
 job_interval = args.job_interval
 
-server = mmx_server_scrape_embed(mongodb_url = mongodb_url, verbose = True)
+server = mmx_server_scrape_featvec(mongodb_url = mongodb_url, verbose = True)
 if not server.is_mongodb_active():
     print('Could not connect to mongo; exiting')
     exit()

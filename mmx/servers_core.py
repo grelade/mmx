@@ -4,17 +4,12 @@ import numpy as np
 
 from urllib.parse import urlparse
 from pymongo import MongoClient
+from pymongo import IndexModel, ASCENDING, DESCENDING
 from pymongo.server_api import ServerApi
 from pymongo.errors import BulkWriteError, ConnectionFailure
 
 from .const import *
-from .utils import hash_string, print_red, print_green
-
-class clusters_col_handler:
-    pass
-
-class memes_col_handler:
-    pass
+from .utils import print_red, print_green
 
 class mmx_server:
 
@@ -23,7 +18,7 @@ class mmx_server:
         self.mongodb_url = mongodb_url
         self.mongodb = mmx_server._get_mongoclient(self.mongodb_url)
         self.memes_col = self.mongodb[MAIN_DB][MEMES_COLLECTION]
-        self.clusters_col = self.mongodb[MAIN_DB][CLUSTERS_COLLECTION]
+        self.prepare_db()
 
     # db related
     def is_mongodb_active(self) -> bool:
@@ -52,7 +47,9 @@ class mmx_server:
 
         if os.path.exists(mongodb_url):
             # path to file with url (used in docker secrets)
-            with open(mongodb_url) as f: mongodb_url = f.readline().strip('\n')
+            with open(mongodb_url) as f:
+                mongodb_url = f.readline().strip('\n')
+                # print(mongodb_url)
 
         if is_valid_url(mongodb_url):
             if 'mongodb+srv' in mongodb_url:
@@ -62,6 +59,23 @@ class mmx_server:
         else:
             if self.verbose: print(f'mongoclient({mongodb_url}): could not identify mongodb_url')
             return None
+
+    def prepare_db(self):
+
+        # create basic index in memes
+        if self.memes_col.count_documents({})==0:
+            print(f'new/empty "{MEMES_COLLECTION}" collection detected')
+
+        ix_info = self.memes_col.index_information()
+
+        indices = []
+        if 'meme_id_index' not in ix_info.keys():
+            ix = IndexModel([("meme_id",DESCENDING)],name="meme_id_index",unique=True)
+            indices.append(ix)
+
+        if len(indices)>0:
+            print(f'creating meme_id_index in "{MEMES_COLLECTION}" collection')
+            self.memes_col.create_indexes(indices)
 
     # memes
     def _write_memes_to_db(self, memes: List[Dict]) -> bool:
@@ -87,7 +101,8 @@ class mmx_server:
         ensure memes extracted from mongodb are in the correct format used in the mmx_server.
         if send_to_db = True, validate meme record to fit the mongodb format instead.
         '''
-        keys = [MEMES_COL_ID,MEMES_COL_IMAGE_URL,MEMES_COL_TITLE,MEMES_COL_UPVOTES,MEMES_COL_COMMENTS,MEMES_COL_PUBL_TIMESTAMP,MEMES_COL_SUBREDDIT]
+        keys = [MEMES_COL_ID,MEMES_COL_IMAGE_URL,MEMES_COL_TITLE,MEMES_COL_SNAPSHOT,MEMES_COL_PUBL_TIMESTAMP,MEMES_COL_SUBREDDIT]
+        # snapshot_subkeys = [MEMES_COL_SNAPSHOT_COMMENTS,MEMES_COL_SNAPSHOT_TIMESTAMP,MEMES_COL_SNAPSHOT_UPVOTES]
 
         # msg = ''
         # for key in keys+[MEMES_COL_FEAT_VEC]:
@@ -103,26 +118,37 @@ class mmx_server:
                 if isinstance(meme[key],list):
                     meme[key] = meme[key][0]
 
+
         # ensure correct types are passed on
         if MEMES_COL_ID in meme.keys():
             if not isinstance(meme[MEMES_COL_ID],str):
                 meme[MEMES_COL_ID] = str(meme[MEMES_COL_ID])
 
-        if MEMES_COL_IMAGE_URL in meme.keys():
-            if not isinstance(meme[MEMES_COL_IMAGE_URL],str):
-                meme[MEMES_COL_IMAGE_URL] = str(meme[MEMES_COL_IMAGE_URL])
+        # if MEMES_COL_IMAGE_URL in meme.keys():
+        #     if MEMES_COL_IMAGE_URL_SOURCE in meme[MEMES_COL_IMAGE_URL].keys():
+        #         if not isinstance(meme[MEMES_COL_IMAGE_URL][MEMES_COL_IMAGE_URL_SOURCE],str):
+        #             meme[MEMES_COL_IMAGE_URL][MEMES_COL_IMAGE_URL_SOURCE] = str(meme[MEMES_COL_IMAGE_URL][MEMES_COL_IMAGE_URL_SOURCE])
+        #     if MEMES_COL_IMAGE_URL_LOCAL in meme[MEMES_COL_IMAGE_URL].keys():
+        #         if not isinstance(meme[MEMES_COL_IMAGE_URL][MEMES_COL_IMAGE_URL_LOCAL],str):
+        #             meme[MEMES_COL_IMAGE_URL][MEMES_COL_IMAGE_URL_LOCAL] = str(meme[MEMES_COL_IMAGE_URL][MEMES_COL_IMAGE_URL_LOCAL])
+        #     if MEMES_COL_IMAGE_URL_ALTER in meme[MEMES_COL_IMAGE_URL].keys():
+        #         if not isinstance(meme[MEMES_COL_IMAGE_URL][MEMES_COL_IMAGE_URL_ALTER],str):
+        #             meme[MEMES_COL_IMAGE_URL][MEMES_COL_IMAGE_URL_ALTER] = str(meme[MEMES_COL_IMAGE_URL][MEMES_COL_IMAGE_URL_ALTER])
 
         if MEMES_COL_TITLE in meme.keys():
             if not isinstance(meme[MEMES_COL_TITLE],str):
                 meme[MEMES_COL_TITLE] = str(meme[MEMES_COL_TITLE])
 
-        if MEMES_COL_UPVOTES in meme.keys():
-            if not isinstance(meme[MEMES_COL_UPVOTES],int):
-                meme[MEMES_COL_UPVOTES] = int(meme[MEMES_COL_UPVOTES])
-
-        if MEMES_COL_COMMENTS in meme.keys():
-            if not isinstance(meme[MEMES_COL_COMMENTS],int):
-                meme[MEMES_COL_COMMENTS] = int(meme[MEMES_COL_COMMENTS])
+        if MEMES_COL_SNAPSHOT in meme.keys():
+            if MEMES_COL_SNAPSHOT_COMMENTS in meme[MEMES_COL_SNAPSHOT].keys():
+                if not isinstance(meme[MEMES_COL_SNAPSHOT][MEMES_COL_SNAPSHOT_COMMENTS],int):
+                    meme[MEMES_COL_SNAPSHOT][MEMES_COL_SNAPSHOT_COMMENTS] = int(meme[MEMES_COL_SNAPSHOT][MEMES_COL_SNAPSHOT_COMMENTS])
+            if MEMES_COL_SNAPSHOT_UPVOTES in meme[MEMES_COL_SNAPSHOT].keys():
+                if not isinstance(meme[MEMES_COL_SNAPSHOT][MEMES_COL_SNAPSHOT_UPVOTES],int):
+                    meme[MEMES_COL_SNAPSHOT][MEMES_COL_SNAPSHOT_UPVOTES] = int(meme[MEMES_COL_SNAPSHOT][MEMES_COL_SNAPSHOT_UPVOTES])
+            if MEMES_COL_SNAPSHOT_TIMESTAMP in meme[MEMES_COL_SNAPSHOT].keys():
+                if not isinstance(meme[MEMES_COL_SNAPSHOT][MEMES_COL_SNAPSHOT_TIMESTAMP],int):
+                    meme[MEMES_COL_SNAPSHOT][MEMES_COL_SNAPSHOT_TIMESTAMP] = int(meme[MEMES_COL_SNAPSHOT][MEMES_COL_SNAPSHOT_TIMESTAMP])
 
         if MEMES_COL_PUBL_TIMESTAMP in meme.keys():
             if not isinstance(meme[MEMES_COL_PUBL_TIMESTAMP],int):
@@ -194,71 +220,3 @@ class mmx_server:
             timestamp = 0
 
         return timestamp
-
-
-    # clustering snapshots
-    def _get_init_clustering_snapshot(self) -> Dict:
-        init_snapshot_info_dict = {CLUSTERS_COL_SNAPSHOT_TIMESTAMP: 0,
-                                   CLUSTERS_COL_SNAPSHOT_NTOTAL: 0,
-                                   CLUSTERS_COL_SNAPSHOT_HASH: hash_string('')}
-
-        init_clusters_info_list = [{CLUSTERS_COL_INFO_EXAMPLE_IMAGE: None,
-                                   CLUSTERS_COL_INFO_IDS: None,
-                                   CLUSTERS_COL_INFO_NMEMES: 0,
-                                   CLUSTERS_COL_INFO_TOTAL_COMMENTS: 0,
-                                   CLUSTERS_COL_INFO_TOTAL_UPVOTES: 0}]
-
-        init_denstream_state_dict = self._clustering_module_func().alg_func.state_dict_compressed()
-
-        init_snapshot = {CLUSTERS_COL_SNAPSHOT: init_snapshot_info_dict,
-                         CLUSTERS_COL_INFO: init_clusters_info_list,
-                         CLUSTERS_COL_CLUSTERING_STATE_DICT: init_denstream_state_dict}
-
-        return init_snapshot
-
-    def _write_clustering_snapshot_to_db(self, clustering_snapshot: Dict) -> bool:
-        '''
-        write clustering snapshot consisting of general snapshot information in snapshot_info_dict,
-        , and the denstream clustering model in denstream_state_dict
-        '''
-        if self.verbose: print('_write_clustering_snapshot_to_db')
-
-        # clustering_snapshot = self._encode_clustering_snapshot(clustering_snapshot)
-
-        try:
-            result = self.clusters_col.insert_one(clustering_snapshot)
-            return result.acknowledged
-        except BulkWriteError as e:
-            if self.verbose: print('error',e)
-            return False
-
-    def _remove_clustering_snapshots(self, clustering_snapshot_fi: Dict) -> bool:
-        timestamp_fi = clustering_snapshot_fi[CLUSTERS_COL_SNAPSHOT][CLUSTERS_COL_SNAPSHOT_TIMESTAMP]
-        filter_criterion = {CLUSTERS_COL_SNAPSHOT+'.'+CLUSTERS_COL_SNAPSHOT_TIMESTAMP: {'$gte': timestamp_fi}}
-        # result = self.clusters_col.find({},filter=filter_criterion)
-
-        # snapshots_to_delete = []
-        # for r in result:
-        #     snapshots_to_delete.append(r)
-
-        result = self.clusters_col.delete_many(filter_criterion)
-        return result.acknowledged
-
-    def _plot_clustering_snapshots(self) -> None:
-        sort_criterion = (f'{CLUSTERS_COL_SNAPSHOT}.{CLUSTERS_COL_SNAPSHOT_TIMESTAMP}', ASCENDING)
-        result = self.clusters_col.find({},sort=[sort_criterion])
-
-        clustering_snapshots = [self._get_init_clustering_snapshot()]
-        for r in result:
-            clustering_snapshots.append(r)
-
-        print_func =  print_green
-        for snapshot in clustering_snapshots:
-            snapshot_ = snapshot[CLUSTERS_COL_SNAPSHOT]
-            timestamp = snapshot_[CLUSTERS_COL_SNAPSHOT_TIMESTAMP]
-            hash_ = snapshot_[CLUSTERS_COL_SNAPSHOT_HASH]
-            ntotal = snapshot_[CLUSTERS_COL_SNAPSHOT_NTOTAL]
-            is_consistent_flag = self._is_clustering_snapshot_consistent(snapshot)
-            if not is_consistent_flag: print_func = print_red
-            is_consistent = {True:'C',False:'I'}[is_consistent_flag]
-            print_func(f'{is_consistent} | {timestamp:13d} | {ntotal:6d} | {hash_}')

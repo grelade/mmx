@@ -21,34 +21,34 @@ services:
       - mongodb_url
 
     # command: sh -c "python server.py"
-    command: sh -c "watchmedo auto-restart -p \"*.py\" -- python server.py --mongodb_url=${MONGODB_URL}"
+    command: sh -c "watchmedo auto-restart -p \"*.py\" -d . -d mmx -- python server.py --mongodb_url=${MONGODB_URL}"
 
 
-  cluster:
-    build: ./dockers/cluster
-    restart: no
-    # depends_on:
-    #   - mongo
-    networks:
-    - node-network
-    volumes:
-      - type: bind
-        source: ./dockers/cluster
-        target: /mmx_app/
-      - type: bind
-        source: ./mmx/
-        target: /mmx_app/mmx/
-    secrets:
-      - mongodb_url
-    environment:
-      - MONGODB_URL
-      - CLUSTER_RUN_MODE
-      - CLUSTER_JOB_INTERVAL
-      - CLUSTER_BATCH_SIZE
+  # cluster:
+  #   build: ./dockers/cluster
+  #   restart: no
+  #   # depends_on:
+  #   #   - mongo
+  #   networks:
+  #   - node-network
+  #   volumes:
+  #     - type: bind
+  #       source: ./dockers/cluster
+  #       target: /mmx_app/
+  #     - type: bind
+  #       source: ./mmx/
+  #       target: /mmx_app/mmx/
+  #   secrets:
+  #     - mongodb_url
+  #   environment:
+  #     - MONGODB_URL
+  #     - CLUSTER_RUN_MODE
+  #     - CLUSTER_JOB_INTERVAL
+  #     - CLUSTER_BATCH_SIZE
 
-    command: sh -c "bash run.sh"
-    # command: sh -c "python server.py --mongodb_url=${MONGODB_URL}"
-    # command: sh -c "watchmedo auto-restart -p \"*.py\" -- python server.py --mongodb_url=${MONGODB_URL} --run_mode ${CLUSTER_RUN_MODE} --job_interval ${CLUSTER_JOB_INTERVAL} --batch_size ${CLUSTER_BATCH_SIZE}"
+  #   command: sh -c "bash run.sh"
+  #   # command: sh -c "python server.py --mongodb_url=${MONGODB_URL}"
+  #   # command: sh -c "watchmedo auto-restart -p \"*.py\" -- python server.py --mongodb_url=${MONGODB_URL} --run_mode ${CLUSTER_RUN_MODE} --job_interval ${CLUSTER_JOB_INTERVAL} --batch_size ${CLUSTER_BATCH_SIZE}"
 
 
   embed:
@@ -68,7 +68,7 @@ services:
       - mongodb_url
 
     # command: sh -c "python server.py"
-    command: sh -c "watchmedo auto-restart -p \"*.py\" -- python server.py"
+    command: sh -c "watchmedo auto-restart -p \"*.py\" -d . -d mmx -- python server.py"
 
 
   scrape:
@@ -85,6 +85,9 @@ services:
       - type: bind
         source: ./mmx/
         target: /mmx_app/mmx/
+      - type: bind
+        source: ./img
+        target: /mmx_app/img
     secrets:
       - mongodb_url
     environment:
