@@ -7,7 +7,7 @@ server=""
 usage() {
     echo "Usage: $0 [-s <server>]"
     echo "Options:"
-    echo "  -s <server>       Specify server to run [api, scrape, cluster, all]"
+    echo "  -s <server>       Specify server to run [api, scrape, all]"
     exit 1
 }
 
@@ -27,11 +27,9 @@ if [ -z "$server" ]; then
 fi
 
 if [ "$server" = "scrape" ]; then
-    docker compose up scrape embed --detach
+    docker compose up scrape feat_extract --detach
 elif [ "$server" = "api" ]; then
     docker compose up api --detach
-elif [ "$server" = "cluster" ]; then
-    docker compose up cluster --detach
 elif [ "$server" = "all" ]; then
     docker compose up --detach
 fi

@@ -51,15 +51,15 @@ services:
   #   # command: sh -c "watchmedo auto-restart -p \"*.py\" -- python server.py --mongodb_url=${MONGODB_URL} --run_mode ${CLUSTER_RUN_MODE} --job_interval ${CLUSTER_JOB_INTERVAL} --batch_size ${CLUSTER_BATCH_SIZE}"
 
 
-  embed:
-    build: ./dockers/embed
+  feat_extract:
+    build: ./dockers/feat_extract
     ports:
       - 8001:8001
     networks:
     - node-network
     volumes:
       - type: bind
-        source: ./dockers/embed
+        source: ./dockers/feat_extract
         target: /mmx_app
       - type: bind
         source: ./mmx/
@@ -75,7 +75,7 @@ services:
     build: ./dockers/scrape
     depends_on:
       # - mongo
-      - embed
+      - feat_extract
     networks:
     - node-network
     volumes:

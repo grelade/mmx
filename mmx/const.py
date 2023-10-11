@@ -44,17 +44,17 @@ MEMES_COL_SNAPSHOT_COMMENTS = 'comments'
 MEMES_COL_LAST_SNAPSHOT = 'last_snapshot'
 MEMES_COL_POPULARITY_SCORE = 'pop_score'
 
-# api server
+# webapi server
 API_V1_BASE_URL = '/api/v1'
 API_PAGE_LIMIT = 50
 API_NEXT_URL = 'next_url'
 
-# embed server
-EMBEDDING_API_URL = 'http://embed:8001/embedding'
-# EMBEDDING_MODEL = 'mobilenet_v3_small'
-# EMBEDDING_MODEL = 'mobilenet_v3_large'
-# EMBEDDING_MODEL = 'resnet_v1_50'
-EMBEDDING_MODEL = 'efficientnet_v2_m'
+# feat_extract server
+FEAT_EXTRACT_API_URL = 'http://feat_extract:8001/features'
+# FEAT_EXTRACT_MODEL = 'mobilenet_v3_small'
+# FEAT_EXTRACT_MODEL = 'mobilenet_v3_large'
+# FEAT_EXTRACT_MODEL = 'resnet_v1_50'
+FEAT_EXTRACT_MODEL = 'efficientnet_v2_m'
 
 # scrape server
 SCRAPING_JOB_INTERVAL = 60

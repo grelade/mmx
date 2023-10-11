@@ -8,43 +8,43 @@ from typing import List,Union
 from .const import *
 from .utils import download_url, is_url, file_exists
 
-class feat_extract:
+class features_module:
     '''
-    feature extraction module: output features from an image using an ML model
+    features extraction module: output features from an image using an ML model
     '''
 
     def __init__(self,
                  verbose: bool = False) -> None:
         self.verbose = verbose
-        self.local_embedder = None
+        self.local_feat_extractor = None
 
-    def _embedding_via_api(self, image_path: str) -> np.ndarray:
+    def _extract_via_api(self, image_path: str) -> np.ndarray:
         img = None
         with open(image_path, "rb") as f:
             image = f.read()
 
         headers = {}
-        response = requests.post(EMBEDDING_API_URL,
+        response = requests.post(FEAT_EXTRACT_API_URL,
                                     headers = headers,
                                     files = {'file':image})
 
         response = response.json()
-        if 'img_embed' in response.keys():
-            img = np.array(response['img_embed'])
+        if MEMES_COL_FEAT_VEC in response.keys():
+            img = np.array(response[MEMES_COL_FEAT_VEC])
 
         return img
 
-    def _set_local_embedder(self,model_name: str = EMBEDDING_MODEL) -> None:
-        if not self.local_embedder:
-            from .embed import embedder
-            self.local_embedder = embedder()
-            self.local_embedder.load_model(model_name = model_name)
+    def _set_local_feat_extractor(self,model_name: str = FEAT_EXTRACT_MODEL) -> None:
+        if not self.local_feat_extractor:
+            from .feat_extract import feat_extractor
+            self.local_feat_extractor = feat_extractor()
+            self.local_feat_extractor.load_model(model_name = model_name)
 
-    def _embedding_via_local_embedder(self, image_path: str) -> np.ndarray:
-        self._set_local_embedder()
+    def _extract_via_local_feat_extractor(self, image_path: str) -> np.ndarray:
+        self._set_local_feat_extractor()
 
         img = None
-        img = self.local_embedder.embed_file(image_path)
+        img = self.local_feat_extractor.get_featvec(image_path)
         if isinstance(img,list):
             img = np.array(img)
 
@@ -63,9 +63,9 @@ class feat_extract:
 
             if image_path:
                 if emb_mode == 'local':
-                    img = self._embedding_via_local_embedder(image_path)
+                    img = self._extract_via_local_feat_extractor(image_path)
                 elif emb_mode == 'api':
-                    img = self._embedding_via_api(image_path)
+                    img = self._extract_via_api(image_path)
 
         except RuntimeError as e:
             print(f'RuntimeError: read_image({image_url}) error: {e}')

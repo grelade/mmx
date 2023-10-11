@@ -4,7 +4,7 @@ from pymongo.errors import BulkWriteError
 from .const import *
 from .servers_core import mmx_server
 from .scraping import scraper_reddit
-from .featvec import feat_extract
+from .featvec import features_module
 from .utils import fetch_internal_image_url, download_local_image_url, form_local_image_path
 
 class mmx_server_scrape_featvec(mmx_server):
@@ -13,7 +13,7 @@ class mmx_server_scrape_featvec(mmx_server):
         super().__init__(mongodb_url = mongodb_url, verbose = verbose)
 
         self.scraping_module = scraper_reddit(verbose = verbose)
-        self.feature_extracting_module = feat_extract(verbose = verbose)
+        self.feature_extracting_module = features_module(verbose = verbose)
 
     def _put_memes_and_featvecs(self, memes: List[Dict]) -> bool:
         try:
@@ -50,7 +50,7 @@ class mmx_server_scrape_featvec(mmx_server):
                     image_url = fetch_internal_image_url(meme)
 
                     meme[MEMES_COL_FEAT_VEC] = self.feature_extracting_module.get_features_from_url(image_url)
-                    meme[MEMES_COL_FEAT_VEC_MODEL] = EMBEDDING_MODEL
+                    meme[MEMES_COL_FEAT_VEC_MODEL] = FEAT_EXTRACT_MODEL
                     meme = self._validate_meme(meme = meme, send_to_db = True)
                     meme[MEMES_COL_SNAPSHOT] = [meme[MEMES_COL_SNAPSHOT]]
                     out_insert = self.memes_col.insert_one(meme)

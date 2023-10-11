@@ -2,22 +2,22 @@ from flask import Flask, request
 import sys
 sys.path.append('./')
 
-from mmx.embed import embedder
+from mmx.feat_extract import feat_extractor
 from mmx.const import *
 
 app = Flask(__name__)
 # app.debug=True
 
-em = embedder()
-em.load_model(EMBEDDING_MODEL)
+fe = feat_extractor()
+fe.load_model(FEAT_EXTRACT_MODEL)
 
-@app.route("/embedding",methods=["POST"])
-def calc_img_embedding():
+@app.route("/features",methods=["POST"])
+def calc_img_features():
     # get image
     fp = request.files.get('file')
-    embedding = em.embed_file(fp)
+    feat_vec = fe.get_featvec(fp)
     del fp
-    return {'img_embed':embedding}
+    return {MEMES_COL_FEAT_VEC:feat_vec}
 
 if __name__ == '__main__':
     app.run(host='0.0.0.0', port = 8001)
