@@ -69,8 +69,8 @@ services:
     restart: unless-stopped
     tty: true
     ports:
-#      - "80:80"
-      - "443:443"
+     - "80:80"
+    #  - "443:443"
     volumes:
       - nginxdata:/etc/nginx
     depends_on:
