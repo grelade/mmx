@@ -29,7 +29,7 @@ which creates **mongodb_url** - a file where the mongodb database url is stored.
 
 Start the containers:
 ```
-./run.sh all
+./run.sh dev all
 ```
 Three containers are created:
 - api (serves the webAPI to http://localhost:20410/api/v1/ via werkzeug)
