@@ -15,10 +15,10 @@ RUN apk --update add nginx && \
 COPY nginx.conf /etc/nginx/nginx.conf
 COPY conf.d/app.conf /etc/nginx/conf.d/app.conf
 
-COPY nginx-selfsigned.key /etc/ssl/private/nginx-selfsigned.key
-COPY nginx-selfsigned.crt /etc/ssl/certs/nginx-selfsigned.crt
+#COPY nginx-selfsigned.key /etc/ssl/private/nginx-selfsigned.key
+#COPY nginx-selfsigned.crt /etc/ssl/certs/nginx-selfsigned.crt
 
 # RUN openssl req -x509 -nodes -days 365 -newkey rsa:2048 -keyout /etc/ssl/private/nginx-selfsigned.key -out /etc/ssl/certs/nginx-selfsigned.crt
 
-EXPOSE 80 443
+# EXPOSE 80 443
 # CMD ["nginx", "-g", "daemon off;"]
