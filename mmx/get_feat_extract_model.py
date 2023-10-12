@@ -2,7 +2,7 @@ import argparse
 import tensorflow as tf
 import tensorflow_hub as hub
 
-parser = argparse.ArgumentParser(description='generate tflite embedding model from the tensorflow hub https://tfhub.dev',
+parser = argparse.ArgumentParser(description='generate tflite feat_extract model from the tensorflow hub https://tfhub.dev',
                                  formatter_class=argparse.ArgumentDefaultsHelpFormatter)
 
 parser.add_argument('-u', '--hub_url', type=str, default='https://tfhub.dev/google/imagenet/resnet_v1_50/feature_vector/5',
