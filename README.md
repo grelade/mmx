@@ -1,5 +1,7 @@
 ## What is mmx?
-<a href="">**MMX** - a simple AI-powered meme analysis tool</a>.
+**MMX** - a simple AI-powered meme analysis tool.
+
+[example api](https://mmxalpha.bieda.it/api/v1) [example app with mmx]()
 
 - Scrapes memes periodically and builds time-resolved meme database:
     * reddit.com module
@@ -13,14 +15,13 @@
 Before building mmx, ensure you have:
 * docker
 * git-lfs
-* a working ATLAS MONGODB database (you can create a free db [https://mongodb.com](here)); important: ATLAS MONGODB is required to run the clustering algorithm)
+* a working Atlas MongoDB database (you can create a free db [here](https://mongodb.com)); important: Atlas MongoDB is required to run the clustering algorithm)
 
 ## How to start your own mmx?
 
-To start **mmx**,
-Clone the repo.
+To start **mmx**... clone the repo first.
 
-Run the build script in development mode:
+Then, run the build script in development mode:
 ```
 ./build.sh dev
 ```
@@ -32,7 +33,7 @@ Start the containers:
 ./run.sh dev all
 ```
 Three containers are created:
-- api (serves the webAPI to http://localhost:20410/api/v1/ via werkzeug)
+- api (serves the webAPI to *http://localhost:20410/api/v1/* via werkzeug)
 - scrape (handles the scraping)
 - feat_extract (handles the ML part)
 
