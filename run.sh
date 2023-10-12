@@ -1,35 +1,31 @@
 #!/bin/bash
 
-# Default values for options
-server=""
-
 # Function to display usage information
 usage() {
-    echo "Usage: $0 [-s <server>]"
+    echo "Usage: $0 [dev | prod] [<server>]"
     echo "Options:"
-    echo "  -s <server>       Specify server to run [api, scrape, all]"
-    exit 1
+    echo "  <server>       Specify server to run [api, scrape, all]"
 }
 
-# Parse command-line options
-while getopts "s:" opt; do
-    case "$opt" in
-        s) server="$OPTARG";;
-        \?) echo "Invalid option: -$OPTARG" >&2
-            usage;;
-    esac
-done
+if [ $# -ge 2 ]; then
+    if [ "$1" = "dev" ]; then
+        env_file=".env.dev"
+        yaml_file="compose-dev.yaml"
+        add=""
+    elif [ "$1" = "prod" ]; then
+        env_file=".env"
+        yaml_file="compose.yaml"
+        add="nginx"
+    fi
 
-# Check if required options are provided
-if [ -z "$server" ]; then
-    echo "You must specify the server with -s option."
+    server=$2
+    if [ "$server" = "scrape" ]; then
+        docker compose --env-file $env_file --file $yaml_file up scrape feat_extract --detach
+    elif [ "$server" = "api" ]; then
+        docker compose --env-file $env_file --file $yaml_file up api $add --detach
+    elif [ "$server" = "all" ]; then
+        docker compose --env-file $env_file --file $yaml_file up --detach
+    fi
+else
     usage
-fi
-
-if [ "$server" = "scrape" ]; then
-    docker compose up scrape feat_extract --detach
-elif [ "$server" = "api" ]; then
-    docker compose up api nginx --detach
-elif [ "$server" = "all" ]; then
-    docker compose up --detach
 fi
