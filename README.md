@@ -1,31 +1,44 @@
-## What is memsEX?
-<a href="">AI-powered meme analysis tool</a>. Consists of two main parts:
+## What is mmx?
+<a href="">**MMX** - a simple AI-powered meme analysis tool</a>.
 
-- **scraping module**: Continously scans and extracts memes from the most popular subreddits.
-- **clustering AI module**: Finds meme clusters using dynamical DBSCAN or static HCLUSTER algorithms with feature extraction based on a pretrained neural network.
+- Scrapes memes periodically and builds time-resolved meme database:
+    * reddit.com module
 
-Both modules run independently through server-like apps. Data is stored in mongodb database and is extracted via REST API.
+- Offers API endpoints with meme analytics:
+    * lists most popular memes with highest level of engagement
+    * clusters similar memes using ML techniques (cosine similarity + feature extraction)
+    * finds trends
 
-## How to run it:
-1. You need to setup the mongodb database by running the script:
+## Requirements
+Before building mmx, ensure you have:
+* docker
+* git-lfs
+* a working ATLAS MONGODB database (you can create a free db [https://mongodb.com](here)); important: ATLAS MONGODB is required to run the clustering algorithm)
 
-python setup.py
+## How to start your own mmx?
 
-You need to have the mongodb database setup beforehand. The script will ask for database address, your db name. If mongodb is found at the address, it will initialize the db and run some tests.
+To start **mmx**,
+Clone the repo.
 
-2. Run the scraping module:
+Run the build script in development mode:
+```
+./build.sh dev
+```
 
-python server_scrape.py
+which creates **mongodb_url** - a file where the mongodb database url is stored. You need to add your database here.
 
-3. Run the clustering AI module:
+Start the containers:
+```
+./run.sh all
+```
+Three containers are created:
+- api (serves the webAPI to http://localhost:20410/api/v1/ via werkzeug)
+- scrape (handles the scraping)
+- feat_extract (handles the ML part)
 
-python server_cluster.py
-
-4. Run the REST API server:
-
-flask --app server_api run
-
-## Based on:
-* [clustering alg](https://github.com/zegami/image-similarity-clustering)
-* [memescraper](https://github.com/Salil-Jain/memescraper)
-* []
+## Production
+Starting mmx in production mode
+```
+./build.sh prod
+```
+gives an additional *nginx* docker serving as a reverse-proxy. Gunicorn is the WSGI server of the api docker.
