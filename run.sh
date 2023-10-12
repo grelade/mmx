@@ -29,7 +29,7 @@ fi
 if [ "$server" = "scrape" ]; then
     docker compose up scrape feat_extract --detach
 elif [ "$server" = "api" ]; then
-    docker compose up api --detach
+    docker compose up api nginx --detach
 elif [ "$server" = "all" ]; then
     docker compose up --detach
 fi

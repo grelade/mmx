@@ -1,0 +1,127 @@
+name: mmx
+version: '0.1'
+services:
+
+  api:
+    build: ./dockers/api
+    ports:
+      - 20410:8002
+    # depends_on:
+    #   - mongo
+    networks:
+    - node-network
+    volumes:
+      - type: bind
+        source: ./dockers/api
+        target: /mmx_app
+      - type: bind
+        source: ./mmx
+        target: /mmx_app/mmx
+    secrets:
+      - mongodb_url
+
+    # command: sh -c "python server.py"
+    command: sh -c "watchmedo auto-restart -p \"*.py\" -d . -d mmx -- python server.py --mongodb_url=${MONGODB_URL}"
+
+
+
+  # cluster:
+  #   build: ./dockers/cluster
+  #   restart: no
+  #   # depends_on:
+  #   #   - mongo
+  #   networks:
+  #   - node-network
+  #   volumes:
+  #     - type: bind
+  #       source: ./dockers/cluster
+  #       target: /mmx_app/
+  #     - type: bind
+  #       source: ./mmx/
+  #       target: /mmx_app/mmx/
+  #   secrets:
+  #     - mongodb_url
+  #   environment:
+  #     - MONGODB_URL
+  #     - CLUSTER_RUN_MODE
+  #     - CLUSTER_JOB_INTERVAL
+  #     - CLUSTER_BATCH_SIZE
+
+  #   command: sh -c "bash run.sh"
+  #   # command: sh -c "python server.py --mongodb_url=${MONGODB_URL}"
+  #   # command: sh -c "watchmedo auto-restart -p \"*.py\" -- python server.py --mongodb_url=${MONGODB_URL} --run_mode ${CLUSTER_RUN_MODE} --job_interval ${CLUSTER_JOB_INTERVAL} --batch_size ${CLUSTER_BATCH_SIZE}"
+
+
+  feat_extract:
+    build: ./dockers/feat_extract
+    ports:
+      - 8001:8001
+    networks:
+    - node-network
+    volumes:
+      - type: bind
+        source: ./dockers/feat_extract
+        target: /mmx_app
+      - type: bind
+        source: ./mmx/
+        target: /mmx_app/mmx/
+    secrets:
+      - mongodb_url
+
+    # command: sh -c "python server.py"
+    command: sh -c "watchmedo auto-restart -p \"*.py\" -d . -d mmx -- python server.py"
+
+
+  scrape:
+    build: ./dockers/scrape
+    depends_on:
+      # - mongo
+      - feat_extract
+    networks:
+    - node-network
+    volumes:
+      - type: bind
+        source: ./dockers/scrape
+        target: /mmx_app/
+      - type: bind
+        source: ./mmx/
+        target: /mmx_app/mmx/
+      - type: bind
+        source: ./img
+        target: /mmx_app/img
+    secrets:
+      - mongodb_url
+    environment:
+      - MONGODB_URL
+      - SCRAPE_RUN_MODE
+      - SCRAPE_JOB_INTERVAL
+
+    command: sh -c "bash run.sh"
+    # command: sh -c "python server.py --mongodb_url=${MONGODB_URL} --run_mode ${SCRAPE_RUN_MODE} --job_interval ${SCRAPE_JOB_INTERVAL}"
+    # command: sh -c "watchmedo auto-restart -p \"*.py\" -- python server.py --mongodb_url=${MONGODB_URL} --run_mode ${SCRAPE_RUN_MODE} --job_interval ${SCRAPE_JOB_INTERVAL}"
+
+
+  # mongo:
+  #   image: 'mongo:latest'
+  #   ports:
+  #    - 30410:27017
+  #   volumes:
+  #     - type: volume
+  #       source: dbdata
+  #       target: /data/db
+  #   networks:
+  #     - node-network
+
+volumes:
+  # dbdata:
+  nginxdata:
+    driver: local
+
+networks:
+  node-network:
+    driver: bridge
+
+secrets:
+  mongodb_url:
+    file : ./mongodb_url
+

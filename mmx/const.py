@@ -57,7 +57,6 @@ FEAT_EXTRACT_API_URL = 'http://feat_extract:8001/features'
 FEAT_EXTRACT_MODEL = 'efficientnet_v2_m'
 
 # scrape server
-SCRAPING_JOB_INTERVAL = 60
 BASEURL_REDDIT = "https://old.reddit.com/r/"
 SUBREDDITS = ['memes','dankmemes','wholesomememes',
               'MemeEconomy','AdviceAnimals','ComedyCemetery',

@@ -21,14 +21,25 @@ WORKDIR /mmx_app
 # Create a non-privileged user that the app will run under.
 # See https://docs.docker.com/develop/develop-images/dockerfile_best-practices/#user
 ARG UID=10001
+ARG GID=1000
+
+RUN addgroup --gid ${GID} www
 RUN adduser \
     --disabled-password \
     --gecos "" \
     --home "/nonexistent" \
-    --shell "/sbin/nologin" \
+    --shell "/bin/sh" \
     --no-create-home \
     --uid "${UID}" \
-    appuser
+    --gid ${GID} \
+    www
+
+
+# ARG GROUP_ID=1000
+# ARG USER_ID=1000
+# # Add user for flask application
+# RUN addgroup --gid 1000 www
+# RUN adduser -D --uid 1000 -G www www --shell /bin/sh
 
 # Download dependencies as a separate step to take advantage of Docker's caching.
 # Leverage a cache mount to /root/.cache/pip to speed up subsequent builds.
@@ -39,6 +50,7 @@ RUN --mount=type=cache,target=/home/grela/.cache/pip \
     --mount=type=bind,source=requirements.txt,target=requirements.txt \
     python -m pip install -r requirements.txt --extra-index-url https://download.pytorch.org/whl/cpu
 
+# RUN pip install gunicorn
 #numba tmp directory hack
 
 # Switch to the non-privileged user to run the application.
@@ -46,6 +58,10 @@ RUN --mount=type=cache,target=/home/grela/.cache/pip \
 ENV TORCH_HOME=/tmp/torch_cache
 
 # USER appuser
+USER www
+
+# EXPOSE 8002
+# CMD [ "gunicorn", "-w", "4", "--bind", "0.0.0.0:8002", "wsgi"]
 
 
 # Copy the source code into the container.

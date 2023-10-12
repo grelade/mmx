@@ -6,8 +6,6 @@ services:
     build: ./dockers/api
     ports:
       - 20410:8002
-    # depends_on:
-    #   - mongo
     networks:
     - node-network
     volumes:
@@ -19,36 +17,7 @@ services:
         target: /mmx_app/mmx
     secrets:
       - mongodb_url
-
-    # command: sh -c "python server.py"
-    command: sh -c "watchmedo auto-restart -p \"*.py\" -d . -d mmx -- python server.py --mongodb_url=${MONGODB_URL}"
-
-
-  # cluster:
-  #   build: ./dockers/cluster
-  #   restart: no
-  #   # depends_on:
-  #   #   - mongo
-  #   networks:
-  #   - node-network
-  #   volumes:
-  #     - type: bind
-  #       source: ./dockers/cluster
-  #       target: /mmx_app/
-  #     - type: bind
-  #       source: ./mmx/
-  #       target: /mmx_app/mmx/
-  #   secrets:
-  #     - mongodb_url
-  #   environment:
-  #     - MONGODB_URL
-  #     - CLUSTER_RUN_MODE
-  #     - CLUSTER_JOB_INTERVAL
-  #     - CLUSTER_BATCH_SIZE
-
-  #   command: sh -c "bash run.sh"
-  #   # command: sh -c "python server.py --mongodb_url=${MONGODB_URL}"
-  #   # command: sh -c "watchmedo auto-restart -p \"*.py\" -- python server.py --mongodb_url=${MONGODB_URL} --run_mode ${CLUSTER_RUN_MODE} --job_interval ${CLUSTER_JOB_INTERVAL} --batch_size ${CLUSTER_BATCH_SIZE}"
+    command: sh -c "gunicorn --env MONGODB_URL=${MONGODB_URL} --bind 0.0.0.0:8002 wsgi"
 
 
   feat_extract:
@@ -66,15 +35,12 @@ services:
         target: /mmx_app/mmx/
     secrets:
       - mongodb_url
-
-    # command: sh -c "python server.py"
     command: sh -c "watchmedo auto-restart -p \"*.py\" -d . -d mmx -- python server.py"
 
 
   scrape:
     build: ./dockers/scrape
     depends_on:
-      # - mongo
       - feat_extract
     networks:
     - node-network
@@ -96,23 +62,26 @@ services:
       - SCRAPE_JOB_INTERVAL
 
     command: sh -c "bash run.sh"
-    # command: sh -c "python server.py --mongodb_url=${MONGODB_URL} --run_mode ${SCRAPE_RUN_MODE} --job_interval ${SCRAPE_JOB_INTERVAL}"
-    # command: sh -c "watchmedo auto-restart -p \"*.py\" -- python server.py --mongodb_url=${MONGODB_URL} --run_mode ${SCRAPE_RUN_MODE} --job_interval ${SCRAPE_JOB_INTERVAL}"
 
+  nginx:
+    build: ./dockers/nginx
+    image: faizanbashir/webserver:latest
+    restart: unless-stopped
+    tty: true
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - nginxdata:/etc/nginx
+    depends_on:
+      - api
+    networks:
+      - node-network
+    command: sh -c "nginx -g \"daemon off;\""
 
-  # mongo:
-  #   image: 'mongo:latest'
-  #   ports:
-  #    - 30410:27017
-  #   volumes:
-  #     - type: volume
-  #       source: dbdata
-  #       target: /data/db
-  #   networks:
-  #     - node-network
-
-# volumes:
-#   dbdata:
+volumes:
+  nginxdata:
+    driver: local
 
 networks:
   node-network:
