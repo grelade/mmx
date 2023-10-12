@@ -9,8 +9,6 @@ ms = mmx_server('mongodb_url')
 
 # import pymongo
 
-# client = pymongo.MongoClient('mongodb+srv://server-alpha:JUMJW5k0oyFqtdF7@mmx-base.4g36sji.mongodb.net/mmx?retryWrites=true&w=majority')
-
 # memes_col = ms.mongodb.mmx.memes_mobilenet_large
 # memes_col = ms.mongodb.mmx.memes_mobilenet_small
 # memes_col = ms.mongodb.mmx.memes_resnet
