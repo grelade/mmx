@@ -1,7 +1,9 @@
 ## What is mmx?
 **MMX** - a simple AI-powered meme analysis tool.
 
-[example api](https://mmxalpha.bieda.it/api/v1) [example app with mmx]()
+[example app](https://mmx-frontend.vercel.app/)
+[backend api](https://mmxalpha.bieda.it/api/v1)
+
 
 - Scrapes memes periodically and builds time-resolved meme database:
     * reddit.com module
