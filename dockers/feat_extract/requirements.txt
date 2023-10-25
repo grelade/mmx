@@ -15,6 +15,6 @@ pybind11==2.11.1
 pycparser==2.21
 sounddevice==0.4.6
 tflite-support==0.4.4
-Werkzeug==3.0.0
+Werkzeug==3.0.1
 zipp==3.17.0
 watchdog==3.0.0
